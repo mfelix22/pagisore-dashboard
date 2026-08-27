@@ -64,9 +64,10 @@ export async function POST(req: NextRequest) {
       message: "EO parties published successfully",
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Dashboard publish error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: `Internal server error: ${message}` },
       { status: 500 }
     );
   }
