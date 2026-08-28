@@ -159,78 +159,27 @@ function getJobColorClass(job: string | null): string {
   if (!job) return "";
   const j = job.toLowerCase();
 
-  if (
-    j.includes("swordsman") ||
-    j.includes("knight") ||
-    j.includes("crusader") ||
-    j.includes("lord knight") ||
-    j.includes("paladin")
-  ) {
-    return "text-red-400";
-  }
+  if (j.includes("lord knight")) return "text-red-400";
+  if (j.includes("paladin")) return "text-red-500";
 
-  if (
-    j.includes("thief") ||
-    j.includes("assassin") ||
-    j.includes("rogue") ||
-    j.includes("stalker") ||
-    j.includes("assassin cross")
-  ) {
-    return "text-purple-400";
-  }
+  if (j.includes("assassin cross")) return "text-purple-400";
+  if (j.includes("stalker")) return "text-purple-500";
 
-  if (
-    j.includes("mage") ||
-    j.includes("wizard") ||
-    j.includes("sage") ||
-    j.includes("professor") ||
-    j.includes("scholar") ||
-    j.includes("high wizard")
-  ) {
-    return "text-blue-400";
-  }
+  if (j.includes("high wizard")) return "text-blue-400";
+  if (j.includes("professor")) return "text-blue-500";
 
-  if (
-    j.includes("archer") ||
-    j.includes("hunter") ||
-    j.includes("sniper") ||
-    j.includes("bard") ||
-    j.includes("dancer") ||
-    j.includes("clown") ||
-    j.includes("gypsy") ||
-    j.includes("minstrel")
-  ) {
-    return "text-yellow-500";
-  }
+  if (j.includes("sniper")) return "text-yellow-500";
+  if (j.includes("minstrel")) return "text-yellow-400";
+  if (j.includes("gypsy")) return "text-yellow-600";
 
-  if (
-    j.includes("acolyte") ||
-    j.includes("priest") ||
-    j.includes("monk") ||
-    j.includes("champion") ||
-    j.includes("high priest")
-  ) {
-    return "text-green-400";
-  }
+  if (j.includes("high priest")) return "text-green-400";
+  if (j.includes("champion")) return "text-green-500";
 
-  if (
-    j.includes("merchant") ||
-    j.includes("blacksmith") ||
-    j.includes("whitesmith") ||
-    j.includes("mastersmith") ||
-    j.includes("alchemist") ||
-    j.includes("biochemist")
-  ) {
-    return "text-orange-400";
-  }
+  if (j.includes("mastersmith")) return "text-orange-400";
+  if (j.includes("biochemist")) return "text-orange-500";
 
-  if (j.includes("gunslinger")) {
-    return "text-black";
-  }
-
-  if (j.includes("summoner")) {
-    return "text-pink-400";
-  }
+  if (j.includes("gunslinger")) return "text-black";
+  if (j.includes("summoner")) return "text-pink-400";
 
   return "";
 }
