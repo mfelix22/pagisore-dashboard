@@ -109,7 +109,7 @@ function buildEoPreview(
           return `${prefix}${name}`;
         })
         .filter((n): n is string => n != null);
-      lines.push(`**Party ${party.partyNumber}** — ${names.join(", ")}`);
+      lines.push(`>>> **Party ${party.partyNumber}** — ${names.join(", ")}`);
     });
 
     lines.push("");
@@ -380,7 +380,32 @@ export default function EmperiumOverrunPage() {
         return;
       }
 
-      const loadedParties = (dbParties as DbParty[]) ?? [];
+      let loadedParties = (dbParties as DbParty[]) ?? [];
+
+      if (loadedParties.length === 0) {
+        const idx = events.findIndex((e) => e.id === selectedEventId);
+        const previousEventId = events[idx + 1]?.id;
+
+        if (previousEventId) {
+          const { data: prevDbParties, error: prevPartiesError } = await supabase
+            .from("eo_parties")
+            .select(
+              "id, event_id, time_group, party_number, raid_leader_member_id, created_at"
+            )
+            .eq("event_id", previousEventId)
+            .order("party_number", { ascending: true });
+
+          if (prevPartiesError) {
+            console.error("Failed to load previous parties:", prevPartiesError);
+            setPartiesError(prevPartiesError.message);
+            setParties(createInitialParties);
+            setLoadingParties(false);
+            return;
+          }
+
+          loadedParties = (prevDbParties as DbParty[]) ?? [];
+        }
+      }
 
       if (loadedParties.length === 0) {
         setParties(createInitialParties);
@@ -455,17 +480,38 @@ export default function EmperiumOverrunPage() {
         setTimeGroupsError(error.message);
         setApplyTo({ pagi: null, sore: null, malam: null });
       } else {
+        let rows =
+          (data as {
+            time_group: string;
+            apply_to_member_id: number | null;
+          }[]) ?? [];
+
+        if (rows.length === 0) {
+          const idx = events.findIndex((e) => e.id === selectedEventId);
+          const previousEventId = events[idx + 1]?.id;
+
+          if (previousEventId) {
+            const { data: prevData, error: prevError } = await supabase
+              .from("eo_time_groups")
+              .select("time_group, apply_to_member_id")
+              .eq("event_id", previousEventId);
+
+            if (!prevError) {
+              rows =
+                (prevData as {
+                  time_group: string;
+                  apply_to_member_id: number | null;
+                }[]) ?? [];
+            }
+          }
+        }
+
         const next: Record<TimeGroup, number | null> = {
           pagi: null,
           sore: null,
           malam: null,
         };
-        (
-          data as {
-            time_group: string;
-            apply_to_member_id: number | null;
-          }[]
-        )?.forEach((row) => {
+        rows.forEach((row) => {
           const group = row.time_group as TimeGroup;
           if (TIME_GROUPS.includes(group)) {
             next[group] = row.apply_to_member_id;
