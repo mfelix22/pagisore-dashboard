@@ -44,8 +44,12 @@ export default function Home() {
             </p>
           </Link>
 
-          <div className="group relative overflow-hidden rounded-2xl bg-[#2b2d31] p-6 shadow-lg ring-1 ring-white/5 opacity-80">
-            <div className="mb-3 h-10 w-10 rounded-xl bg-[#383a40] p-2.5 text-[#b5bac1]">
+          <Link
+            href="/members"
+            className="group relative overflow-hidden rounded-2xl bg-[#2b2d31] p-6 shadow-lg ring-1 ring-white/5 transition hover:-translate-y-1 hover:bg-[#313338] hover:shadow-xl hover:ring-[#5865f2]/30"
+          >
+            <span className="absolute -right-2 -top-2 h-16 w-16 rounded-full bg-[#5865f2]/10 blur-2xl transition group-hover:bg-[#5865f2]/20" />
+            <div className="relative mb-3 h-10 w-10 rounded-xl bg-[#5865f2]/20 p-2.5 text-[#5865f2]">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -58,14 +62,11 @@ export default function Home() {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <h2 className="text-lg font-bold text-[#f2f3f5]">Members</h2>
-            <p className="mt-1 text-sm text-[#b5bac1]">
-              Browse guild member profiles.
+            <h2 className="relative text-lg font-bold text-[#f2f3f5]">Members</h2>
+            <p className="relative mt-1 text-sm text-[#b5bac1]">
+              Browse and manage guild member profiles.
             </p>
-            <span className="mt-3 inline-flex items-center rounded-full bg-[#383a40] px-2.5 py-0.5 text-xs font-medium text-[#b5bac1]">
-              Coming soon
-            </span>
-          </div>
+          </Link>
         </nav>
       </main>
     </div>

@@ -41,10 +41,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Dashboard
               </Link>
               <Link
+                href="/members"
+                className="text-sm font-medium text-[#b5bac1] hover:text-white"
+              >
+                Members
+              </Link>
+              <Link
                 href="/eo"
                 className="text-sm font-medium text-[#b5bac1] hover:text-white"
               >
                 EO
+              </Link>
+              <Link
+                href="/attendance"
+                className="text-sm font-medium text-[#b5bac1] hover:text-white"
+              >
+                Attendance
               </Link>
             </nav>
           </div>

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export type SearchableOption = {
   value: number;
   label: string;
+  className?: string;
 };
 
 type SearchableSelectProps = {
@@ -66,7 +67,11 @@ export default function SearchableSelect({
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full items-center justify-between rounded-md border border-[#4e5058] bg-[#2b2d31] px-3 py-2 text-left text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
       >
-        <span className={selected ? "text-[#f2f3f5]" : "text-[#b5bac1]"}>
+        <span
+          className={
+            selected ? selected.className || "text-[#f2f3f5]" : "text-[#b5bac1]"
+          }
+        >
           {selected ? selected.label : placeholder}
         </span>
         <svg
@@ -106,7 +111,7 @@ export default function SearchableSelect({
                   className={`cursor-pointer rounded-md px-3 py-2 text-sm ${
                     option.value === value
                       ? "bg-[#5865f2] text-white"
-                      : "text-[#f2f3f5] hover:bg-[#4e5058]"
+                      : `${option.className || "text-[#f2f3f5]"} hover:bg-[#4e5058]`
                   }`}
                 >
                   {option.label}

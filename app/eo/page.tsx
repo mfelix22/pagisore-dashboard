@@ -29,6 +29,7 @@ type Event = {
 type Member = {
   id: number;
   ign: string;
+  job: string | null;
   is_active: boolean;
 };
 
@@ -154,6 +155,82 @@ function getStatusBadge(status: string | undefined) {
   );
 }
 
+function getJobColorClass(job: string | null): string {
+  if (!job) return "";
+  const j = job.toLowerCase();
+
+  if (
+    j.includes("swordsman") ||
+    j.includes("knight") ||
+    j.includes("crusader") ||
+    j.includes("lord knight") ||
+    j.includes("paladin")
+  ) {
+    return "text-red-400";
+  }
+
+  if (
+    j.includes("thief") ||
+    j.includes("assassin") ||
+    j.includes("rogue") ||
+    j.includes("stalker") ||
+    j.includes("assassin cross")
+  ) {
+    return "text-purple-400";
+  }
+
+  if (
+    j.includes("mage") ||
+    j.includes("wizard") ||
+    j.includes("sage") ||
+    j.includes("professor") ||
+    j.includes("scholar") ||
+    j.includes("high wizard")
+  ) {
+    return "text-blue-400";
+  }
+
+  if (
+    j.includes("archer") ||
+    j.includes("hunter") ||
+    j.includes("sniper") ||
+    j.includes("bard") ||
+    j.includes("dancer") ||
+    j.includes("clown") ||
+    j.includes("gypsy") ||
+    j.includes("minstrel")
+  ) {
+    return "text-yellow-500";
+  }
+
+  if (
+    j.includes("acolyte") ||
+    j.includes("priest") ||
+    j.includes("monk") ||
+    j.includes("champion") ||
+    j.includes("high priest")
+  ) {
+    return "text-green-400";
+  }
+
+  if (
+    j.includes("merchant") ||
+    j.includes("blacksmith") ||
+    j.includes("whitesmith") ||
+    j.includes("mastersmith") ||
+    j.includes("alchemist") ||
+    j.includes("biochemist")
+  ) {
+    return "text-orange-400";
+  }
+
+  if (j.includes("gunslinger")) {
+    return "text-black";
+  }
+
+  return "";
+}
+
 function createEmptyParty(partyNumber: number): Party {
   return { partyNumber, slots: Array(SLOTS_PER_PARTY).fill(null) };
 }
@@ -231,7 +308,7 @@ export default function EmperiumOverrunPage() {
 
       const { data, error } = await supabase
         .from("members")
-        .select("id, ign, is_active")
+        .select("id, ign, job, is_active")
         .eq("is_active", true)
         .order("ign", { ascending: true });
 
@@ -468,6 +545,14 @@ export default function EmperiumOverrunPage() {
   const unassignedMembers = useMemo(() => {
     return availableMembers.filter((m) => !assignedMemberIds.has(m.id));
   }, [availableMembers, assignedMemberIds]);
+
+  const notAttendingMembers = useMemo(() => {
+    return members
+      .filter((m) => attendance.get(m.id) === NOT_ATTENDING_STATUS)
+      .sort((a, b) =>
+        a.ign.localeCompare(b.ign, undefined, { sensitivity: "base" })
+      );
+  }, [members, attendance]);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) ?? null,
@@ -854,6 +939,12 @@ export default function EmperiumOverrunPage() {
                     {availableMembers.length - assignedCount}
                   </p>
                 </div>
+                <div className="col-span-2 rounded-lg bg-[#383a40] p-2 text-center">
+                  <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
+                  <p className="font-bold text-red-400">
+                    {notAttendingMembers.length}
+                  </p>
+                </div>
               </div>
 
               <p className="mb-3 text-sm text-[#b5bac1]">
@@ -871,13 +962,44 @@ export default function EmperiumOverrunPage() {
                     }}
                     className="flex cursor-grab items-center justify-between rounded-lg bg-[#383a40] px-3 py-2 active:cursor-grabbing"
                   >
-                    <span className="text-sm font-medium text-[#f2f3f5]">
+                    <span
+                      className={`text-sm font-medium ${
+                        getJobColorClass(member.job) || "text-[#f2f3f5]"
+                      }`}
+                    >
                       {member.ign}
                     </span>
                     {getStatusBadge(attendance.get(member.id))}
                   </li>
                 ))}
               </ul>
+
+              {notAttendingMembers.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-medium text-[#b5bac1]">
+                    Tidak Hadir
+                  </p>
+                  <ul className="max-h-[200px] space-y-2 overflow-y-auto pr-1">
+                    {notAttendingMembers.map((member) => (
+                      <li
+                        key={member.id}
+                        className="flex items-center justify-between rounded-lg bg-[#383a40]/50 px-3 py-2 opacity-60"
+                      >
+                        <span
+                          className={`text-sm font-medium ${
+                            getJobColorClass(member.job) || "text-[#f2f3f5]"
+                          }`}
+                        >
+                          {member.ign}
+                        </span>
+                        <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-400">
+                          Tidak Hadir
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </aside>
 
             <div className="space-y-6">
@@ -963,7 +1085,11 @@ export default function EmperiumOverrunPage() {
                         onChange={(v) => setApplyTarget(group, v || null)}
                         options={[
                           { value: 0, label: "— None —" },
-                          ...members.map((m) => ({ value: m.id, label: m.ign })),
+                          ...members.map((m) => ({
+                            value: m.id,
+                            label: m.ign,
+                            className: getJobColorClass(m.job),
+                          })),
                         ]}
                         placeholder="— None —"
                       />
@@ -1046,6 +1172,7 @@ export default function EmperiumOverrunPage() {
                                       ...options.map((m) => ({
                                         value: m.id,
                                         label: `${m.ign} — ${attendance.get(m.id) ?? "No response"}`,
+                                        className: getJobColorClass(m.job),
                                       })),
                                     ]}
                                     placeholder="— Empty —"
