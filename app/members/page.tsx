@@ -69,6 +69,7 @@ const JOB_OPTIONS: string[] = [
   "Professor",
   "Sniper",
   "Stalker",
+  "Summoner",
 ];
 
 function Panel({

@@ -74,6 +74,8 @@ export default function AttendanceReportPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+  const [savingMemberId, setSavingMemberId] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -155,7 +157,8 @@ export default function AttendanceReportPage() {
         const counts = memberCounts.get(m.id) ?? { hadir: 0, tentative: 0, tidak_hadir: 0 };
         return { ...m, counts, status: null };
       }
-      const status = eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
+      const raw = eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
+      const status = raw === "not_attending" ? "tidak_hadir" : raw;
       return { ...m, counts: null, status };
     });
   }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap]);
@@ -164,6 +167,66 @@ export default function AttendanceReportPage() {
     () => events.find((e) => e.id === selectedEventId) ?? null,
     [events, selectedEventId]
   );
+
+  async function updateAttendance(memberId: number, newStatus: string) {
+    if (!selectedEventId) return;
+    setSavingMemberId(memberId);
+    setLoadError(null);
+
+    try {
+      const res = await fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId,
+          eventId: selectedEventId,
+          status: newStatus,
+        }),
+      });
+
+      const text = await res.text();
+      let data: { success?: boolean; error?: string } = { success: false };
+      try {
+        data = text ? JSON.parse(text) : data;
+      } catch {
+        throw new Error(text || `Server error: ${res.status}`);
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update attendance");
+      }
+
+      setRecords((prev) => {
+        if (newStatus === "no_response") {
+          return prev.filter(
+            (r) => !(r.member_id === memberId && r.event_id === selectedEventId)
+          );
+        }
+        const index = prev.findIndex(
+          (r) => r.member_id === memberId && r.event_id === selectedEventId
+        );
+        if (index >= 0) {
+          const next = [...prev];
+          next[index] = { ...next[index], status: newStatus };
+          return next;
+        }
+        return [
+          ...prev,
+          { member_id: memberId, event_id: selectedEventId, status: newStatus },
+        ];
+      });
+    } catch (err) {
+      console.error("Failed to update attendance:", err);
+      const errorMessage =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Failed to update attendance";
+      setLoadError(errorMessage);
+    } finally {
+      setSavingMemberId(null);
+      setEditingMemberId(null);
+    }
+  }
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
@@ -187,6 +250,8 @@ export default function AttendanceReportPage() {
               onChange={(e) => {
                 const v = e.target.value;
                 setSelectedEventId(v === "all" ? null : Number(v));
+                setEditingMemberId(null);
+                setSavingMemberId(null);
               }}
               className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-3 text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] sm:w-80"
             >
@@ -236,7 +301,10 @@ export default function AttendanceReportPage() {
                         <th className="px-4 py-3 text-center font-semibold">Total</th>
                       </>
                     ) : (
-                      <th className="px-4 py-3 text-center font-semibold">Status</th>
+                      <>
+                        <th className="px-4 py-3 text-center font-semibold">Status</th>
+                        <th className="px-4 py-3 text-center font-semibold">Actions</th>
+                      </>
                     )}
                   </tr>
                 </thead>
@@ -255,11 +323,50 @@ export default function AttendanceReportPage() {
                           </td>
                         </>
                       ) : (
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusStyle(row.status ?? "no_response")}`}>
-                            {getStatusDisplay(row.status ?? "no_response")}
-                          </span>
-                        </td>
+                        <>
+                          <td className="px-4 py-3 text-center">
+                            {editingMemberId === row.id ? (
+                              <select
+                                value={row.status ?? "no_response"}
+                                onChange={(e) =>
+                                  updateAttendance(row.id, e.target.value)
+                                }
+                                disabled={savingMemberId === row.id}
+                                className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+                              >
+                                <option value="hadir">Hadir</option>
+                                <option value="tentative">Tentative</option>
+                                <option value="tidak_hadir">Tidak Hadir</option>
+                                <option value="no_response">No response</option>
+                              </select>
+                            ) : (
+                              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusStyle(row.status ?? "no_response")}`}>
+                                {getStatusDisplay(row.status ?? "no_response")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {editingMemberId === row.id ? (
+                              savingMemberId === row.id ? (
+                                <span className="text-xs text-[#b5bac1]">Saving...</span>
+                              ) : (
+                                <button
+                                  onClick={() => setEditingMemberId(null)}
+                                  className="rounded-md bg-[#383a40] px-2 py-1 text-xs font-medium text-[#f2f3f5] hover:bg-[#2b2d31]"
+                                >
+                                  Cancel
+                                </button>
+                              )
+                            ) : (
+                              <button
+                                onClick={() => setEditingMemberId(row.id)}
+                                className="rounded-md bg-[#5865f2] px-2 py-1 text-xs font-medium text-white hover:bg-[#4752c4]"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </td>
+                        </>
                       )}
                     </tr>
                   ))}
@@ -303,6 +410,33 @@ export default function AttendanceReportPage() {
                         <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
                         <p className="font-bold text-red-400">{row.counts.tidak_hadir}</p>
                       </div>
+                    </div>
+                  )}
+
+                  {selectedEventId != null && (
+                    <div className="mt-3">
+                      {editingMemberId === row.id ? (
+                        <select
+                          value={row.status ?? "no_response"}
+                          onChange={(e) =>
+                            updateAttendance(row.id, e.target.value)
+                          }
+                          disabled={savingMemberId === row.id}
+                          className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+                        >
+                          <option value="hadir">Hadir</option>
+                          <option value="tentative">Tentative</option>
+                          <option value="tidak_hadir">Tidak Hadir</option>
+                          <option value="no_response">No response</option>
+                        </select>
+                      ) : (
+                        <button
+                          onClick={() => setEditingMemberId(row.id)}
+                          className="w-full rounded-md bg-[#5865f2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4752c4]"
+                        >
+                          Edit Status
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

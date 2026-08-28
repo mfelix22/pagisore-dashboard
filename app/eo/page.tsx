@@ -228,6 +228,10 @@ function getJobColorClass(job: string | null): string {
     return "text-black";
   }
 
+  if (j.includes("summoner")) {
+    return "text-pink-400";
+  }
+
   return "";
 }
 
