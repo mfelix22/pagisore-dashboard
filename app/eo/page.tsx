@@ -1119,7 +1119,7 @@ export default function EmperiumOverrunPage() {
                             )}
                           </div>
 
-                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                             {party.slots.map((slotMemberId, slotIndex) => {
                               const currentValue = slotMemberId ?? "";
 
@@ -1177,6 +1177,7 @@ export default function EmperiumOverrunPage() {
                                       })),
                                     ]}
                                     placeholder="— Empty —"
+                                    className="text-xs px-2 py-1.5"
                                   />
                                 </div>
                               );

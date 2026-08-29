@@ -15,6 +15,7 @@ type SearchableSelectProps = {
   options: SearchableOption[];
   placeholder?: string;
   emptyLabel?: string;
+  className?: string;
 };
 
 export default function SearchableSelect({
@@ -23,6 +24,7 @@ export default function SearchableSelect({
   options,
   placeholder = "— Select —",
   emptyLabel = "No matches",
+  className,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -76,12 +78,12 @@ export default function SearchableSelect({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-md border border-[#4e5058] bg-[#2b2d31] px-3 py-2 text-left text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+        className={`flex w-full items-center justify-between rounded-md border border-[#4e5058] bg-[#2b2d31] px-3 py-2 text-left text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none ${className ?? ""}`}
       >
         <span
-          className={
+          className={`block truncate ${
             selected ? selected.className || "text-[#f2f3f5]" : "text-[#b5bac1]"
-          }
+          }`}
         >
           {selected ? selected.label : placeholder}
         </span>
