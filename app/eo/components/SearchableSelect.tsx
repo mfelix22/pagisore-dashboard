@@ -33,21 +33,21 @@ export default function SearchableSelect({
   const selected = options.find((o) => o.value === value);
 
   const TEXT_TO_BG: Record<string, string> = {
-    "text-red-400": "bg-red-400",
-    "text-red-500": "bg-red-500",
-    "text-purple-400": "bg-purple-400",
-    "text-purple-500": "bg-purple-500",
-    "text-blue-400": "bg-blue-400",
-    "text-blue-500": "bg-blue-500",
-    "text-yellow-500": "bg-yellow-500",
-    "text-yellow-400": "bg-yellow-400",
-    "text-yellow-600": "bg-yellow-600",
-    "text-green-400": "bg-green-400",
-    "text-green-500": "bg-green-500",
-    "text-orange-400": "bg-orange-400",
-    "text-orange-500": "bg-orange-500",
-    "text-sky-300": "bg-sky-300",
-    "text-pink-400": "bg-pink-400",
+    "text-red-400": "bg-red-400/25",
+    "text-red-500": "bg-red-500/25",
+    "text-purple-400": "bg-purple-400/25",
+    "text-purple-500": "bg-purple-500/25",
+    "text-blue-400": "bg-blue-400/25",
+    "text-blue-500": "bg-blue-500/25",
+    "text-yellow-500": "bg-yellow-500/25",
+    "text-yellow-400": "bg-yellow-400/25",
+    "text-yellow-600": "bg-yellow-600/25",
+    "text-green-400": "bg-green-400/25",
+    "text-green-500": "bg-green-500/25",
+    "text-orange-400": "bg-orange-400/25",
+    "text-orange-500": "bg-orange-500/25",
+    "text-sky-300": "bg-sky-300/25",
+    "text-pink-400": "bg-pink-400/25",
   };
 
   const selectedBg = selected?.className
