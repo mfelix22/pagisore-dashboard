@@ -338,6 +338,93 @@ function ConfirmModal({
   );
 }
 
+type BulkEditModalProps = {
+  count: number;
+  saving: boolean;
+  onClose: () => void;
+  onSubmit: (job: string, status: string) => Promise<void>;
+};
+
+function BulkEditModal({ count, saving, onClose, onSubmit }: BulkEditModalProps) {
+  const [job, setJob] = useState("__no_change__");
+  const [status, setStatus] = useState("__no_change__");
+
+  async function handleSave() {
+    await onSubmit(job, status);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <Panel title={`Bulk Edit ${count} Members`}>
+        <div className="space-y-4">
+          <div>
+            <label
+              htmlFor="bulk-job"
+              className="mb-1 block text-sm font-medium text-[#b5bac1]"
+            >
+              Job
+            </label>
+            <select
+              id="bulk-job"
+              value={job}
+              onChange={(e) => setJob(e.target.value)}
+              disabled={saving}
+              className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-2.5 text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] disabled:opacity-60"
+            >
+              <option value="__no_change__">No change</option>
+              <option value="">— Not set</option>
+              {JOB_OPTIONS.map((j) => (
+                <option key={j} value={j}>
+                  {j}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="bulk-status"
+              className="mb-1 block text-sm font-medium text-[#b5bac1]"
+            >
+              Status
+            </label>
+            <select
+              id="bulk-status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              disabled={saving}
+              className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-2.5 text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] disabled:opacity-60"
+            >
+              <option value="__no_change__">No change</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="rounded-md bg-[#383a40] px-4 py-2 text-sm font-medium text-[#f2f3f5] hover:bg-[#4e5058] disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="rounded-md bg-[#5865f2] px-4 py-2 text-sm font-medium text-white hover:bg-[#4752c4] disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -353,6 +440,8 @@ export default function MembersPage() {
     useState<InactivateConfirm | null>(null);
   const [duplicateReactivate, setDuplicateReactivate] =
     useState<ReactivateConfirm | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   async function loadMembers() {
     setLoading(true);
@@ -601,6 +690,66 @@ export default function MembersPage() {
     }
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      if (prev.size === filteredMembers.length) return new Set();
+      return new Set(filteredMembers.map((m) => m.id));
+    });
+  }
+
+  async function doBulkUpdate(jobValue: string, statusValue: string) {
+    if (selectedIds.size === 0) return;
+
+    const updates: { job?: string | null; is_active?: boolean } = {};
+    if (jobValue !== "__no_change__") updates.job = jobValue.trim() || null;
+    if (statusValue === "true") updates.is_active = true;
+    if (statusValue === "false") updates.is_active = false;
+
+    if (Object.keys(updates).length === 0) {
+      setBulkOpen(false);
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage(null);
+
+    const { error } = await supabase
+      .from("members")
+      .update(updates)
+      .in("id", [...selectedIds]);
+
+    if (error) {
+      console.error("Failed to bulk update members:", error);
+      setSaveMessage(
+        `Failed to bulk update: ${error.message}${
+          error.code ? ` (code: ${error.code})` : ""
+        }`
+      );
+    } else {
+      setMembers((prev) =>
+        sortMembers(
+          prev.map((m) =>
+            selectedIds.has(m.id) ? { ...m, ...updates } : m
+          )
+        )
+      );
+      setSaveMessage("Members updated successfully.");
+      setBulkOpen(false);
+      setSelectedIds(new Set());
+    }
+
+    setSaving(false);
+  }
+
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
       <main className="mx-auto w-full max-w-6xl">
@@ -644,12 +793,21 @@ export default function MembersPage() {
               ))}
             </select>
           </div>
-          <button
-            onClick={() => setAdding(true)}
-            className="rounded-md bg-[#3ba55d] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#318a4e]"
-          >
-            + Add Member
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setBulkOpen(true)}
+              disabled={selectedIds.size === 0}
+              className="rounded-md bg-[#5865f2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4752c4] disabled:opacity-50"
+            >
+              Bulk Edit {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+            </button>
+            <button
+              onClick={() => setAdding(true)}
+              className="rounded-md bg-[#3ba55d] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#318a4e]"
+            >
+              + Add Member
+            </button>
+          </div>
         </section>
 
         <section className="mb-4">
@@ -727,6 +885,17 @@ export default function MembersPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-[#1e1f22] text-[#b5bac1]">
                   <tr>
+                    <th className="px-2 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        onChange={toggleSelectAll}
+                        checked={
+                          filteredMembers.length > 0 &&
+                          selectedIds.size === filteredMembers.length
+                        }
+                        className="h-4 w-4 cursor-pointer accent-[#5865f2]"
+                      />
+                    </th>
                     <th className="px-4 py-3 font-semibold">IGN</th>
                     <th className="px-4 py-3 font-semibold">Job</th>
                     <th className="px-4 py-3 font-semibold">Discord ID</th>
@@ -739,6 +908,14 @@ export default function MembersPage() {
                 <tbody className="divide-y divide-[#383a40]">
                   {filteredMembers.map((member) => (
                     <tr key={member.id} className="hover:bg-[#383a40]/30">
+                      <td className="px-2 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          onChange={() => toggleSelect(member.id)}
+                          checked={selectedIds.has(member.id)}
+                          className="h-4 w-4 cursor-pointer accent-[#5865f2]"
+                        />
+                      </td>
                       <td className="px-4 py-3 font-medium text-[#f2f3f5]">
                         {member.ign}
                       </td>
@@ -781,9 +958,17 @@ export default function MembersPage() {
                   className="rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5"
                 >
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="font-bold text-[#f2f3f5]">
-                      {member.ign}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        onChange={() => toggleSelect(member.id)}
+                        checked={selectedIds.has(member.id)}
+                        className="h-4 w-4 cursor-pointer accent-[#5865f2]"
+                      />
+                      <span className="font-bold text-[#f2f3f5]">
+                        {member.ign}
+                      </span>
+                    </div>
                     <span
                       className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         member.is_active
@@ -827,6 +1012,15 @@ export default function MembersPage() {
             setAdding(false);
           }}
           onSubmit={adding ? handleAddSubmit : handleEditSubmit}
+        />
+      )}
+
+      {bulkOpen && (
+        <BulkEditModal
+          count={selectedIds.size}
+          saving={saving}
+          onClose={() => setBulkOpen(false)}
+          onSubmit={doBulkUpdate}
         />
       )}
 
