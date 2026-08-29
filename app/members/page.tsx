@@ -44,6 +44,34 @@ function formatJob(job: string | null) {
   return job;
 }
 
+function getJobColorClass(job: string): string {
+  const j = job.toLowerCase();
+
+  if (j.includes("lord knight")) return "text-red-400";
+  if (j.includes("paladin")) return "text-red-500";
+
+  if (j.includes("assassin cross")) return "text-purple-400";
+  if (j.includes("stalker")) return "text-purple-500";
+
+  if (j.includes("high wizard")) return "text-blue-400";
+  if (j.includes("professor")) return "text-blue-500";
+
+  if (j.includes("sniper")) return "text-yellow-500";
+  if (j.includes("minstrel")) return "text-yellow-400";
+  if (j.includes("gypsy")) return "text-yellow-600";
+
+  if (j.includes("high priest")) return "text-green-400";
+  if (j.includes("champion")) return "text-green-500";
+
+  if (j.includes("mastersmith")) return "text-orange-400";
+  if (j.includes("biochemist")) return "text-orange-500";
+
+  if (j.includes("gunslinger")) return "text-black";
+  if (j.includes("summoner")) return "text-pink-400";
+
+  return "";
+}
+
 function sortMembers(members: Member[]): Member[] {
   return [...members].sort((a, b) =>
     a.ign.localeCompare(b.ign, undefined, { sensitivity: "base" })
@@ -316,6 +344,7 @@ export default function MembersPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [jobFilter, setJobFilter] = useState<string>("all");
   const [editing, setEditing] = useState<Member | null>(null);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -367,9 +396,11 @@ export default function MembersPage() {
         statusFilter === "all" ||
         (statusFilter === "active" && m.is_active) ||
         (statusFilter === "inactive" && !m.is_active);
-      return matchesSearch && matchesStatus;
+      const matchesJob =
+        jobFilter === "all" || (m.job ?? "").trim() === jobFilter;
+      return matchesSearch && matchesStatus && matchesJob;
     });
-  }, [members, search, statusFilter]);
+  }, [members, search, statusFilter, jobFilter]);
 
   const counts = useMemo(() => {
     const total = members.length;
@@ -386,6 +417,18 @@ export default function MembersPage() {
       map[key] = (map[key] ?? 0) + 1;
     });
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [members]);
+
+  const maxJobCount = useMemo(() => {
+    return jobCounts.reduce((max, [, count]) => Math.max(max, count), 0);
+  }, [jobCounts]);
+
+  const jobOptions = useMemo(() => {
+    const jobs = new Set<string>();
+    members.forEach((m) => {
+      if (m.job?.trim()) jobs.add(m.job.trim());
+    });
+    return Array.from(jobs).sort();
   }, [members]);
 
   async function doUpdateMember(
@@ -578,7 +621,7 @@ export default function MembersPage() {
         </div>
 
         <section className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -592,6 +635,18 @@ export default function MembersPage() {
                 {opt.label}
               </button>
             ))}
+            <select
+              value={jobFilter}
+              onChange={(e) => setJobFilter(e.target.value)}
+              className="rounded-md border border-[#383a40] bg-[#1e1f22] px-3 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2]"
+            >
+              <option value="all">All Jobs</option>
+              {jobOptions.map((j) => (
+                <option key={j} value={j}>
+                  {j}
+                </option>
+              ))}
+            </select>
           </div>
           <button
             onClick={() => setAdding(true)}
@@ -628,19 +683,34 @@ export default function MembersPage() {
 
         {jobCounts.length > 0 && (
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
-            <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
+            <h2 className="mb-4 text-sm font-semibold text-[#f2f3f5]">
               Active Members by Job
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {jobCounts.map(([job, count]) => (
-                <div
-                  key={job}
-                  className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm text-[#f2f3f5] ring-1 ring-white/5"
-                >
-                  <span className="font-medium">{job}</span>{" "}
-                  <span className="text-[#b5bac1]">({count})</span>
-                </div>
-              ))}
+            <div className="space-y-3">
+              {jobCounts.map(([job, count]) => {
+                const percent =
+                  maxJobCount > 0 ? (count / maxJobCount) * 100 : 0;
+                return (
+                  <div key={job} className="flex items-center gap-3">
+                    <span
+                      className={`w-28 shrink-0 text-xs font-medium ${
+                        getJobColorClass(job) || "text-[#f2f3f5]"
+                      }`}
+                    >
+                      {job}
+                    </span>
+                    <div className="h-4 flex-1 rounded bg-[#1e1f22]">
+                      <div
+                        className="h-4 rounded bg-[#5865f2] transition-all"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                    <span className="w-6 shrink-0 text-right text-xs text-[#f2f3f5]">
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
