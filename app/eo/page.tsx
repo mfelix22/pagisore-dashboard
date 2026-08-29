@@ -1118,15 +1118,7 @@ export default function EmperiumOverrunPage() {
                         <div
                           key={party.partyNumber}
                           className="rounded-xl bg-[#383a40] p-4"
-                          onDragOver={(e) => {
-                            if (
-                              Array.from(e.dataTransfer.types).includes(
-                                "partyGroup"
-                              )
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
+                          onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
                             const sourceGroup = e.dataTransfer.getData(
