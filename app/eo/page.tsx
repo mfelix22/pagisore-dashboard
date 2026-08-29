@@ -615,6 +615,20 @@ export default function EmperiumOverrunPage() {
     });
   }
 
+  function moveParty(
+    group: TimeGroup,
+    fromIndex: number,
+    toIndex: number
+  ) {
+    if (fromIndex === toIndex) return;
+    setParties((prev) => {
+      const list = [...prev[group]];
+      const [moved] = list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, moved);
+      return { ...prev, [group]: renumberParties(list) };
+    });
+  }
+
   function setApplyTarget(group: TimeGroup, memberId: number | null) {
     setApplyTo((prev) => ({ ...prev, [group]: memberId }));
   }
@@ -1104,8 +1118,51 @@ export default function EmperiumOverrunPage() {
                         <div
                           key={party.partyNumber}
                           className="rounded-xl bg-[#383a40] p-4"
+                          onDragOver={(e) => {
+                            if (
+                              Array.from(e.dataTransfer.types).includes(
+                                "partyGroup"
+                              )
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const sourceGroup = e.dataTransfer.getData(
+                              "partyGroup"
+                            );
+                            const sourceIndex = e.dataTransfer.getData(
+                              "partyIndex"
+                            );
+                            if (
+                              !sourceGroup ||
+                              sourceGroup !== group ||
+                              !sourceIndex
+                            )
+                              return;
+                            const fromIndex = Number(sourceIndex);
+                            if (
+                              isNaN(fromIndex) ||
+                              fromIndex === partyIndex
+                            )
+                              return;
+                            moveParty(group, fromIndex, partyIndex);
+                          }}
                         >
-                          <div className="mb-3 flex items-center justify-between">
+                          <div
+                            className="mb-3 flex cursor-grab select-none items-center justify-between active:cursor-grabbing"
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("partyGroup", group);
+                              e.dataTransfer.setData(
+                                "partyIndex",
+                                String(partyIndex)
+                              );
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            title="Drag to reorder party"
+                          >
                             <h4 className="font-bold text-[#f2f3f5]">
                               Party {party.partyNumber}
                             </h4>
