@@ -234,7 +234,7 @@ export default function AttendanceReportPage() {
     const list: {
       ign: string;
       reason: string;
-      status: "tidak_hadir" | "no_response";
+      status: string;
       hasReason: boolean;
       eventName?: string;
       eventDate?: string;
@@ -266,28 +266,32 @@ export default function AttendanceReportPage() {
         });
       });
     } else {
-      const eventsById = new Map(events.map((e) => [e.id, e]));
-      const latestByMember = new Map<number, AttendanceRecord>();
-      records.forEach((r) => {
-        if (r.status !== "tidak_hadir" && r.status !== "not_attending") return;
-        if (latestByMember.has(r.member_id)) return;
-        latestByMember.set(r.member_id, r);
-      });
-      latestByMember.forEach((r, memberId) => {
-        const member = membersById.get(memberId);
-        if (!member) return;
-        const event = eventsById.get(r.event_id);
-        list.push({
-          ign: member.ign,
-          status: "tidak_hadir",
-          hasReason: !!r.reason?.trim(),
-          reason: r.reason?.trim() || "No reason",
-          eventName: event?.name,
-          eventDate: event?.event_date
-            ? formatEventDate(event.event_date)
-            : undefined,
+      const latestEvent = events[0];
+      if (latestEvent) {
+        const recordsByKey = new Map(
+          records.map((r) => [`${r.member_id}-${r.event_id}`, r])
+        );
+        members.forEach((m) => {
+          const raw =
+            eventStatusMap.get(latestEvent.id)?.get(m.id) ?? "no_response";
+          const status = raw === "not_attending" ? "tidak_hadir" : raw;
+          if (status === "hadir" || status === "tentative") return;
+          const record = recordsByKey.get(`${m.id}-${latestEvent.id}`);
+          const isTidakHadir = status === "tidak_hadir";
+          list.push({
+            ign: m.ign,
+            status,
+            hasReason: isTidakHadir && !!record?.reason?.trim(),
+            reason: isTidakHadir
+              ? record?.reason?.trim() || "No reason"
+              : "No response",
+            eventName: latestEvent.name,
+            eventDate: latestEvent.event_date
+              ? formatEventDate(latestEvent.event_date)
+              : undefined,
+          });
         });
-      });
+      }
     }
     return list.sort((a, b) => a.ign.localeCompare(b.ign));
   }, [selectedEventId, records, members, events]);
@@ -452,7 +456,7 @@ export default function AttendanceReportPage() {
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
             <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
               {selectedEventId == null
-                ? "Latest Absence per Member"
+                ? "Latest Event — Not Joining"
                 : "Who Can\'t / Didn\'t Attend"}
             </h2>
             <div className="space-y-2">
@@ -732,6 +736,59 @@ export default function AttendanceReportPage() {
                 </div>
               ))}
             </div>
+
+            {selectedEventId == null && (
+              <section className="mt-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
+                <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
+                  Last 6 Events Matrix
+                </h2>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[36rem]">
+                    <div className="grid grid-cols-7 gap-1 border-b border-[#383a40] pb-2 text-xs text-[#b5bac1]">
+                      <div className="px-2 py-1 font-semibold">IGN</div>
+                      {events.slice(0, 6).map((e) => (
+                        <div key={e.id} className="px-1 py-1 text-center">
+                          <p className="font-medium text-[#f2f3f5]">
+                            {e.name}
+                          </p>
+                          <p>{formatEventDate(e.event_date)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {filteredMembers.map((m) => (
+                      <div
+                        key={m.id}
+                        className="grid grid-cols-7 items-center gap-1 border-b border-[#383a40]/50 py-1"
+                      >
+                        <div className="px-2 text-sm text-[#f2f3f5] truncate">
+                          {m.ign}
+                        </div>
+                        {events.slice(0, 6).map((e) => {
+                          const raw =
+                            eventStatusMap.get(e.id)?.get(m.id) ??
+                            "no_response";
+                          const status =
+                            raw === "not_attending" ? "tidak_hadir" : raw;
+                          return (
+                            <div
+                              key={e.id}
+                              className="flex items-center justify-center py-1"
+                            >
+                              <span
+                                title={getStatusDisplay(status)}
+                                className={`h-4 w-4 rounded-sm ${getTimelineDotColor(
+                                  status
+                                )}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>
