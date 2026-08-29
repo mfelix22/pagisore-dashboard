@@ -1088,6 +1088,7 @@ export default function EmperiumOverrunPage() {
                             value: m.id,
                             label: m.ign,
                             className: getJobColorClass(m.job),
+                            group: m.job || "No Job",
                           })),
                         ]}
                         placeholder="— None —"
@@ -1172,6 +1173,7 @@ export default function EmperiumOverrunPage() {
                                         value: m.id,
                                         label: `${m.ign} — ${attendance.get(m.id) ?? "No response"}`,
                                         className: getJobColorClass(m.job),
+                                        group: m.job || "No Job",
                                       })),
                                     ]}
                                     placeholder="— Empty —"

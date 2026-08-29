@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 export type SearchableOption = {
   value: number;
   label: string;
   className?: string;
+  group?: string;
 };
 
 type SearchableSelectProps = {
@@ -29,11 +30,21 @@ export default function SearchableSelect({
 
   const selected = options.find((o) => o.value === value);
 
-  const filtered = query.trim()
-    ? options.filter((o) =>
-        o.label.toLowerCase().includes(query.trim().toLowerCase())
+  const filtered = (query.trim()
+    ? options.filter(
+        (o) =>
+          o.label.toLowerCase().includes(query.trim().toLowerCase()) ||
+          (o.group ?? "")
+            .toLowerCase()
+            .includes(query.trim().toLowerCase())
       )
-    : options;
+    : options
+  ).sort((a, b) => {
+    const groupA = a.group ?? "";
+    const groupB = b.group ?? "";
+    if (groupA !== groupB) return groupA.localeCompare(groupB);
+    return a.label.localeCompare(b.label);
+  });
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -104,19 +115,30 @@ export default function SearchableSelect({
             {filtered.length === 0 ? (
               <li className="px-3 py-2 text-sm text-[#b5bac1]">{emptyLabel}</li>
             ) : (
-              filtered.map((option) => (
-                <li
-                  key={option.value}
-                  onClick={() => handleSelect(option.value)}
-                  className={`cursor-pointer rounded-md px-3 py-2 text-sm ${
-                    option.value === value
-                      ? "bg-[#5865f2] text-white"
-                      : `${option.className || "text-[#f2f3f5]"} hover:bg-[#4e5058]`
-                  }`}
-                >
-                  {option.label}
-                </li>
-              ))
+              filtered.map((option, index) => {
+                const showHeader =
+                  index === 0 ||
+                  option.group !== filtered[index - 1].group;
+                return (
+                  <Fragment key={option.value}>
+                    {showHeader && option.group && (
+                      <li className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[#b5bac1]">
+                        {option.group}
+                      </li>
+                    )}
+                    <li
+                      onClick={() => handleSelect(option.value)}
+                      className={`cursor-pointer rounded-md px-3 py-2 text-sm ${
+                        option.value === value
+                          ? "bg-[#5865f2] text-white"
+                          : `${option.className || "text-[#f2f3f5]"} hover:bg-[#4e5058]`
+                      }`}
+                    >
+                      {option.label}
+                    </li>
+                  </Fragment>
+                );
+              })
             )}
           </ul>
         </div>
