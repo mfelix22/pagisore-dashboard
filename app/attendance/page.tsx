@@ -58,6 +58,13 @@ function getStatusStyle(status: string) {
   return "bg-[#383a40] text-[#b5bac1]";
 }
 
+function getTimelineDotColor(status: string) {
+  if (status === "hadir") return "bg-[#3ba55d]";
+  if (status === "tentative") return "bg-[#faa61a]";
+  if (status === "tidak_hadir") return "bg-red-400";
+  return "bg-[#383a40]";
+}
+
 function getStatusDisplay(status: string) {
   if (status === "hadir") return "Hadir";
   if (status === "tentative") return "Tentative";
@@ -174,11 +181,18 @@ export default function AttendanceReportPage() {
         const counts = memberCounts.get(m.id) ?? { hadir: 0, tentative: 0, tidak_hadir: 0 };
         const total = counts.hadir + counts.tentative + counts.tidak_hadir;
         const rate = total > 0 ? Math.round((counts.hadir / total) * 100) : 0;
-        return { ...m, counts, rate, absentStreak: absentStreaks.get(m.id) ?? 0, status: null };
+        return {
+          ...m,
+          counts,
+          rate,
+          absentStreak: absentStreaks.get(m.id) ?? 0,
+          timeline: memberTimelines.get(m.id) ?? [],
+          status: null,
+        };
       }
       const raw = eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
       const status = raw === "not_attending" ? "tidak_hadir" : raw;
-      return { ...m, counts: null, rate: null, absentStreak: null, status };
+      return { ...m, counts: null, rate: null, absentStreak: null, timeline: null, status };
     });
   }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap, absentStreaks]);
 
@@ -186,6 +200,34 @@ export default function AttendanceReportPage() {
     () => events.find((e) => e.id === selectedEventId) ?? null,
     [events, selectedEventId]
   );
+
+  const selectedEventCounts = useMemo(() => {
+    if (selectedEventId == null) return null;
+    const counts = { hadir: 0, tentative: 0, tidak_hadir: 0, no_response: 0 };
+    members.forEach((m) => {
+      const raw =
+        eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
+      const status = raw === "not_attending" ? "tidak_hadir" : raw;
+      if (status === "hadir") counts.hadir++;
+      else if (status === "tentative") counts.tentative++;
+      else if (status === "tidak_hadir") counts.tidak_hadir++;
+      else counts.no_response++;
+    });
+    return counts;
+  }, [selectedEventId, members, eventStatusMap]);
+
+  const memberTimelines = useMemo(() => {
+    const recentEvents = events.slice(0, 10);
+    const map = new Map<number, string[]>();
+    members.forEach((m) => {
+      const statuses = recentEvents.map((e) => {
+        const raw = eventStatusMap.get(e.id)?.get(m.id) ?? "no_response";
+        return raw === "not_attending" ? "tidak_hadir" : raw;
+      });
+      map.set(m.id, statuses);
+    });
+    return map;
+  }, [members, events, eventStatusMap]);
 
   async function updateAttendance(memberId: number, newStatus: string) {
     if (!selectedEventId) return;
@@ -297,6 +339,35 @@ export default function AttendanceReportPage() {
           </p>
         )}
 
+        {selectedEventCounts && (
+          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
+              <p className="text-xs text-[#b5bac1]">Hadir</p>
+              <p className="text-xl font-bold text-[#3ba55d]">
+                {selectedEventCounts.hadir}
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
+              <p className="text-xs text-[#b5bac1]">Tentative</p>
+              <p className="text-xl font-bold text-[#faa61a]">
+                {selectedEventCounts.tentative}
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
+              <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
+              <p className="text-xl font-bold text-red-400">
+                {selectedEventCounts.tidak_hadir}
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
+              <p className="text-xs text-[#b5bac1]">No Response</p>
+              <p className="text-xl font-bold text-[#f2f3f5]">
+                {selectedEventCounts.no_response}
+              </p>
+            </div>
+          </section>
+        )}
+
         {loading ? (
           <p className="text-sm text-[#b5bac1]">Loading attendance data...</p>
         ) : loadError ? (
@@ -320,6 +391,7 @@ export default function AttendanceReportPage() {
                         <th className="px-4 py-3 text-center font-semibold">Total</th>
                         <th className="px-4 py-3 text-center font-semibold">Rate</th>
                         <th className="px-4 py-3 text-center font-semibold">Streak</th>
+                        <th className="px-4 py-3 text-center font-semibold">Last 10</th>
                       </>
                     ) : (
                       <>
@@ -362,6 +434,19 @@ export default function AttendanceReportPage() {
                                 {row.absentStreak}
                               </span>
                             )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-1">
+                              {row.timeline.map((s, i) => (
+                                <span
+                                  key={i}
+                                  title={s}
+                                  className={`h-2.5 w-2.5 rounded-full ${getTimelineDotColor(
+                                    s
+                                  )}`}
+                                />
+                              ))}
+                            </div>
                           </td>
                         </>
                       ) : (
@@ -474,6 +559,20 @@ export default function AttendanceReportPage() {
                               {row.absentStreak}
                             </p>
                           )}
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <p className="mb-1 text-xs text-[#b5bac1]">Last 10</p>
+                        <div className="flex flex-wrap gap-1">
+                          {row.timeline.map((s, i) => (
+                            <span
+                              key={i}
+                              title={s}
+                              className={`h-2.5 w-2.5 rounded-full ${getTimelineDotColor(
+                                s
+                              )}`}
+                            />
+                          ))}
                         </div>
                       </div>
                     </>
