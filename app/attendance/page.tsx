@@ -375,7 +375,7 @@ export default function AttendanceReportPage() {
 
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
-      <main className="mx-auto w-full max-w-6xl">
+      <main className="mx-auto w-full max-w-full">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-extrabold text-[#f2f3f5] sm:text-3xl">
             Attendance Report
@@ -516,7 +516,7 @@ export default function AttendanceReportPage() {
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
-              <table className="w-full min-w-max text-left text-sm">
+              <table className="w-full text-left text-sm">
                 <thead className="bg-[#1e1f22] text-[#b5bac1]">
                   <tr>
                     <th className="px-4 py-3 font-semibold">IGN</th>
