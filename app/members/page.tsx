@@ -419,10 +419,6 @@ export default function MembersPage() {
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
   }, [members]);
 
-  const maxJobCount = useMemo(() => {
-    return jobCounts.reduce((max, [, count]) => Math.max(max, count), 0);
-  }, [jobCounts]);
-
   const jobOptions = useMemo(() => {
     const jobs = new Set<string>();
     members.forEach((m) => {
@@ -683,34 +679,25 @@ export default function MembersPage() {
 
         {jobCounts.length > 0 && (
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
-            <h2 className="mb-4 text-sm font-semibold text-[#f2f3f5]">
+            <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
               Active Members by Job
             </h2>
-            <div className="space-y-3">
-              {jobCounts.map(([job, count]) => {
-                const percent =
-                  maxJobCount > 0 ? (count / maxJobCount) * 100 : 0;
-                return (
-                  <div key={job} className="flex items-center gap-3">
-                    <span
-                      className={`w-28 shrink-0 text-xs font-medium ${
-                        getJobColorClass(job) || "text-[#f2f3f5]"
-                      }`}
-                    >
-                      {job}
-                    </span>
-                    <div className="h-4 flex-1 rounded bg-[#1e1f22]">
-                      <div
-                        className="h-4 rounded bg-[#5865f2] transition-all"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                    <span className="w-6 shrink-0 text-right text-xs text-[#f2f3f5]">
-                      {count}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="flex flex-wrap gap-2">
+              {jobCounts.map(([job, count]) => (
+                <div
+                  key={job}
+                  className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm text-[#f2f3f5] ring-1 ring-white/5"
+                >
+                  <span
+                    className={`font-medium ${
+                      getJobColorClass(job) || "text-[#f2f3f5]"
+                    }`}
+                  >
+                    {job}
+                  </span>{" "}
+                  <span className="text-[#b5bac1]">({count})</span>
+                </div>
+              ))}
             </div>
           </section>
         )}
