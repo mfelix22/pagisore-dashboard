@@ -178,7 +178,7 @@ function getJobColorClass(job: string | null): string {
   if (j.includes("mastersmith")) return "text-orange-400";
   if (j.includes("biochemist")) return "text-orange-500";
 
-  if (j.includes("gunslinger")) return "text-black";
+  if (j.includes("gunslinger")) return "text-sky-300";
   if (j.includes("summoner")) return "text-pink-400";
 
   return "";
