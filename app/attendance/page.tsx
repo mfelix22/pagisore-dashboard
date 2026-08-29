@@ -230,16 +230,61 @@ export default function AttendanceReportPage() {
     return counts;
   }, [selectedEventId, members, eventStatusMap]);
 
-  const reasonSummary = useMemo(() => {
-    const map = new Map<string, number>();
-    records.forEach((r) => {
-      if (r.status !== "tidak_hadir" && r.status !== "not_attending") return;
-      if (selectedEventId != null && r.event_id !== selectedEventId) return;
-      const key = r.reason?.trim() || "No reason";
-      map.set(key, (map.get(key) ?? 0) + 1);
-    });
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [selectedEventId, records]);
+  const personalReasons = useMemo(() => {
+    const list: {
+      ign: string;
+      reason: string;
+      status: "tidak_hadir" | "no_response";
+      eventName?: string;
+      eventDate?: string;
+    }[] = [];
+    const membersById = new Map(members.map((m) => [m.id, m]));
+
+    if (selectedEventId != null) {
+      records.forEach((r) => {
+        if (r.event_id !== selectedEventId) return;
+        if (
+          r.status !== "tidak_hadir" &&
+          r.status !== "not_attending" &&
+          r.status !== "no_response"
+        )
+          return;
+        const member = membersById.get(r.member_id);
+        if (!member) return;
+        const isNoResponse = r.status === "no_response";
+        list.push({
+          ign: member.ign,
+          status: isNoResponse ? "no_response" : "tidak_hadir",
+          reason: isNoResponse
+            ? "No response"
+            : r.reason?.trim() || "No reason",
+        });
+      });
+    } else {
+      const eventsById = new Map(events.map((e) => [e.id, e]));
+      const latestByMember = new Map<number, AttendanceRecord>();
+      records.forEach((r) => {
+        if (r.status !== "tidak_hadir" && r.status !== "not_attending") return;
+        if (latestByMember.has(r.member_id)) return;
+        latestByMember.set(r.member_id, r);
+      });
+      latestByMember.forEach((r, memberId) => {
+        const member = membersById.get(memberId);
+        if (!member) return;
+        const event = eventsById.get(r.event_id);
+        list.push({
+          ign: member.ign,
+          status: "tidak_hadir",
+          reason: r.reason?.trim() || "No reason",
+          eventName: event?.name,
+          eventDate: event?.event_date
+            ? formatEventDate(event.event_date)
+            : undefined,
+        });
+      });
+    }
+    return list.sort((a, b) => a.ign.localeCompare(b.ign));
+  }, [selectedEventId, records, members, events]);
 
   async function updateAttendance(memberId: number, newStatus: string) {
     if (!selectedEventId) return;
@@ -385,21 +430,41 @@ export default function AttendanceReportPage() {
           </section>
         )}
 
-        {reasonSummary.length > 0 && (
+        {personalReasons.length > 0 && (
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
             <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
               {selectedEventId == null
-                ? "All Absence Reasons"
-                : "Absence Reasons for This Event"}
+                ? "Latest Absence per Member"
+                : "Who Can\'t / Didn\'t Attend"}
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {reasonSummary.map(([reason, count]) => (
+            <div className="space-y-2">
+              {personalReasons.map((item) => (
                 <div
-                  key={reason}
-                  className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm text-[#f2f3f5] ring-1 ring-white/5"
+                  key={`${item.ign}-${item.eventDate ?? "all"}`}
+                  className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm ring-1 ring-white/5"
                 >
-                  <span className="font-medium text-[#f2f3f5]">{reason}</span>{" "}
-                  <span className="text-[#b5bac1]">({count})</span>
+                  <span className="font-medium text-[#f2f3f5]">{item.ign}</span>
+                  <span
+                    className={`ml-2 inline-flex rounded px-2 py-0.5 text-xs font-semibold ${
+                      item.status === "tidak_hadir"
+                        ? "bg-red-500/15 text-red-400"
+                        : "bg-[#383a40] text-[#b5bac1]"
+                    }`}
+                  >
+                    {item.status === "tidak_hadir"
+                      ? "Can\'t attend"
+                      : "Didn\'t respond"}
+                  </span>
+                  {selectedEventId == null && item.eventName && (
+                    <span className="ml-1 text-xs text-[#b5bac1]">
+                      ({item.eventName} — {item.eventDate})
+                    </span>
+                  )}
+                  {item.status === "tidak_hadir" && (
+                    <span className="ml-1 text-[#b5bac1]">
+                      — {item.reason}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
