@@ -456,7 +456,7 @@ export default function AttendanceReportPage() {
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
             <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
               {selectedEventId == null
-                ? "Latest Event — Not Joining"
+                ? "Latest Event — Not Attending"
                 : "Who Can\'t / Didn\'t Attend"}
             </h2>
             <div className="space-y-2">
