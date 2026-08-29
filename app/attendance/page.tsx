@@ -479,7 +479,7 @@ export default function AttendanceReportPage() {
                       ? item.hasReason
                         ? "Can\'t attend"
                         : "No reason"
-                      : "Not in attendance"}
+                      : "No response"}
                   </span>
                   {selectedEventId == null && item.eventName && (
                     <span className="ml-1 text-xs text-[#b5bac1]">
@@ -516,7 +516,7 @@ export default function AttendanceReportPage() {
                         {events.slice(0, 6).map((e) => (
                           <th
                             key={e.id}
-                            className="px-2 py-3 text-center text-xs font-semibold"
+                            className="min-w-[6rem] px-2 py-3 text-center text-xs font-semibold"
                           >
                             <div>{e.name}</div>
                             <div className="text-[10px] font-normal text-[#b5bac1]">
@@ -554,10 +554,10 @@ export default function AttendanceReportPage() {
                       {row.counts ? (
                         <>
                           {row.timeline.slice(0, 6).map((s, i) => (
-                            <td key={i} className="px-2 py-3 text-center">
+                            <td key={i} className="min-w-[6rem] px-2 py-3 text-center">
                               <span
                                 title={getStatusDisplay(s)}
-                                className={`inline-block h-4 w-4 rounded-sm ${getTimelineDotColor(
+                                className={`inline-block h-5 w-5 rounded ${getTimelineDotColor(
                                   s
                                 )}`}
                               />
