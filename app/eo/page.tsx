@@ -1234,7 +1234,7 @@ export default function EmperiumOverrunPage() {
                                       { value: 0, label: "— Empty —" },
                                       ...options.map((m) => ({
                                         value: m.id,
-                                        label: `${m.ign} — ${attendance.get(m.id) ?? "No response"}`,
+                                        label: m.ign,
                                         className: getJobColorClass(m.job),
                                         group: m.job || "No Job",
                                       })),
