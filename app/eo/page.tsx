@@ -109,7 +109,7 @@ function buildEoPreview(
           return `${prefix}${name}`;
         })
         .filter((n): n is string => n != null);
-      lines.push(`**Party ${party.partyNumber}** — ${names.join(", ")}`);
+      lines.push(`> **Party ${party.partyNumber}** — ${names.join(", ")}`);
     });
 
     lines.push("");
