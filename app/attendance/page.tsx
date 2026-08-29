@@ -331,7 +331,14 @@ export default function AttendanceReportPage() {
                 </thead>
                 <tbody className="divide-y divide-[#383a40]">
                   {tableRows.map((row) => (
-                    <tr key={row.id} className="hover:bg-[#383a40]/30">
+                    <tr
+                      key={row.id}
+                      className={`hover:bg-[#383a40]/30 ${
+                        row.absentStreak && row.absentStreak >= 3
+                          ? "bg-red-500/10"
+                          : ""
+                      }`}
+                    >
                       <td className="px-4 py-3 font-medium text-[#f2f3f5]">{row.ign}</td>
                       <td className="px-4 py-3 text-[#b5bac1]">{formatJob(row.job)}</td>
                       {row.counts ? (
@@ -347,7 +354,7 @@ export default function AttendanceReportPage() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             {row.absentStreak && row.absentStreak >= 3 ? (
-                              <span className="inline-flex rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-400">
+                              <span className="inline-flex items-center gap-1 rounded bg-red-500 px-2 py-1 text-xs font-bold text-white">
                                 {row.absentStreak} streak
                               </span>
                             ) : (
@@ -414,7 +421,11 @@ export default function AttendanceReportPage() {
               {tableRows.map((row) => (
                 <div
                   key={row.id}
-                  className="rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5"
+                  className={`rounded-2xl p-4 shadow-lg ring-1 ${
+                    row.absentStreak && row.absentStreak >= 3
+                      ? "bg-red-500/10 ring-red-500/50"
+                      : "bg-[#2b2d31] ring-white/5"
+                  }`}
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <span className="font-bold text-[#f2f3f5]">{row.ign}</span>
@@ -455,8 +466,8 @@ export default function AttendanceReportPage() {
                         <div>
                           <p className="text-xs text-[#b5bac1]">Streak</p>
                           {row.absentStreak && row.absentStreak >= 3 ? (
-                            <span className="inline-flex rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-400">
-                              {row.absentStreak}
+                            <span className="inline-flex items-center gap-1 rounded bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                              {row.absentStreak} streak
                             </span>
                           ) : (
                             <p className="font-bold text-[#f2f3f5]">
