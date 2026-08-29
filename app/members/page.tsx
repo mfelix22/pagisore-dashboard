@@ -378,6 +378,16 @@ export default function MembersPage() {
     return { total, active, inactive };
   }, [members]);
 
+  const jobCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    members.forEach((m) => {
+      if (!m.is_active) return;
+      const key = m.job?.trim() || "Not set";
+      map[key] = (map[key] ?? 0) + 1;
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [members]);
+
   async function doUpdateMember(
     id: number,
     ign: string,
@@ -615,6 +625,25 @@ export default function MembersPage() {
             <p className="text-xl font-bold text-red-400">{counts.inactive}</p>
           </div>
         </section>
+
+        {jobCounts.length > 0 && (
+          <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
+            <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
+              Active Members by Job
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {jobCounts.map(([job, count]) => (
+                <div
+                  key={job}
+                  className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm text-[#f2f3f5] ring-1 ring-white/5"
+                >
+                  <span className="font-medium">{job}</span>{" "}
+                  <span className="text-[#b5bac1]">({count})</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {saveMessage && (
           <div
