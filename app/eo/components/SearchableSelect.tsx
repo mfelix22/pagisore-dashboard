@@ -105,7 +105,7 @@ export default function SearchableSelect({
         <span
           className={`block truncate ${
             selectedBg
-              ? "text-black"
+              ? "text-white"
               : selected
               ? "text-[#f2f3f5]"
               : "text-[#b5bac1]"
@@ -116,7 +116,7 @@ export default function SearchableSelect({
         <svg
           className={`h-4 w-4 transition-transform ${
             open ? "rotate-180" : ""
-          } ${selectedBg ? "text-black" : "text-[#b5bac1]"}`}
+          } ${selectedBg ? "text-white" : "text-[#b5bac1]"}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
