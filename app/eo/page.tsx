@@ -616,16 +616,30 @@ export default function EmperiumOverrunPage() {
   }
 
   function moveParty(
-    group: TimeGroup,
+    fromGroup: TimeGroup,
     fromIndex: number,
+    toGroup: TimeGroup,
     toIndex: number
   ) {
-    if (fromIndex === toIndex) return;
+    if (fromGroup === toGroup && fromIndex === toIndex) return;
     setParties((prev) => {
-      const list = [...prev[group]];
-      const [moved] = list.splice(fromIndex, 1);
-      list.splice(toIndex, 0, moved);
-      return { ...prev, [group]: renumberParties(list) };
+      if (fromGroup === toGroup) {
+        const list = [...prev[fromGroup]];
+        const [moved] = list.splice(fromIndex, 1);
+        list.splice(toIndex, 0, moved);
+        return { ...prev, [fromGroup]: renumberParties(list) };
+      }
+
+      const fromList = [...prev[fromGroup]];
+      const [moved] = fromList.splice(fromIndex, 1);
+      const toList = [...prev[toGroup]];
+      toList.splice(toIndex, 0, moved);
+
+      return {
+        ...prev,
+        [fromGroup]: renumberParties(fromList),
+        [toGroup]: renumberParties(toList),
+      };
     });
   }
 
@@ -1123,23 +1137,23 @@ export default function EmperiumOverrunPage() {
                             e.preventDefault();
                             const sourceGroup = e.dataTransfer.getData(
                               "partyGroup"
-                            );
+                            ) as TimeGroup;
                             const sourceIndex = e.dataTransfer.getData(
                               "partyIndex"
                             );
                             if (
                               !sourceGroup ||
-                              sourceGroup !== group ||
+                              !TIME_GROUPS.includes(sourceGroup) ||
                               !sourceIndex
                             )
                               return;
                             const fromIndex = Number(sourceIndex);
                             if (
                               isNaN(fromIndex) ||
-                              fromIndex === partyIndex
+                              (sourceGroup === group && fromIndex === partyIndex)
                             )
                               return;
-                            moveParty(group, fromIndex, partyIndex);
+                            moveParty(sourceGroup, fromIndex, group, partyIndex);
                           }}
                         >
                           <div
