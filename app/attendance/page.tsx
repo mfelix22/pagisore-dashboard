@@ -175,6 +175,19 @@ export default function AttendanceReportPage() {
     });
   }, [members, search]);
 
+  const memberTimelines = useMemo(() => {
+    const recentEvents = events.slice(0, 10);
+    const map = new Map<number, string[]>();
+    members.forEach((m) => {
+      const statuses = recentEvents.map((e) => {
+        const raw = eventStatusMap.get(e.id)?.get(m.id) ?? "no_response";
+        return raw === "not_attending" ? "tidak_hadir" : raw;
+      });
+      map.set(m.id, statuses);
+    });
+    return map;
+  }, [members, events, eventStatusMap]);
+
   const tableRows = useMemo(() => {
     return filteredMembers.map((m) => {
       if (selectedEventId == null) {
@@ -194,7 +207,7 @@ export default function AttendanceReportPage() {
       const status = raw === "not_attending" ? "tidak_hadir" : raw;
       return { ...m, counts: null, rate: null, absentStreak: null, timeline: null, status };
     });
-  }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap, absentStreaks]);
+  }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap, absentStreaks, memberTimelines]);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) ?? null,
@@ -215,19 +228,6 @@ export default function AttendanceReportPage() {
     });
     return counts;
   }, [selectedEventId, members, eventStatusMap]);
-
-  const memberTimelines = useMemo(() => {
-    const recentEvents = events.slice(0, 10);
-    const map = new Map<number, string[]>();
-    members.forEach((m) => {
-      const statuses = recentEvents.map((e) => {
-        const raw = eventStatusMap.get(e.id)?.get(m.id) ?? "no_response";
-        return raw === "not_attending" ? "tidak_hadir" : raw;
-      });
-      map.set(m.id, statuses);
-    });
-    return map;
-  }, [members, events, eventStatusMap]);
 
   async function updateAttendance(memberId: number, newStatus: string) {
     if (!selectedEventId) return;
