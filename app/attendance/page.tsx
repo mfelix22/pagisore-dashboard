@@ -140,6 +140,23 @@ export default function AttendanceReportPage() {
     return map;
   }, [records]);
 
+  const absentStreaks = useMemo(() => {
+    const map = new Map<number, number>();
+    members.forEach((m) => {
+      let streak = 0;
+      for (const event of events) {
+        const status = eventStatusMap.get(event.id)?.get(m.id);
+        if (status === "tidak_hadir" || status === "not_attending") {
+          streak++;
+        } else {
+          break;
+        }
+      }
+      map.set(m.id, streak);
+    });
+    return map;
+  }, [members, events, eventStatusMap]);
+
   const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
     return members.filter((m) => {
@@ -155,13 +172,15 @@ export default function AttendanceReportPage() {
     return filteredMembers.map((m) => {
       if (selectedEventId == null) {
         const counts = memberCounts.get(m.id) ?? { hadir: 0, tentative: 0, tidak_hadir: 0 };
-        return { ...m, counts, status: null };
+        const total = counts.hadir + counts.tentative + counts.tidak_hadir;
+        const rate = total > 0 ? Math.round((counts.hadir / total) * 100) : 0;
+        return { ...m, counts, rate, absentStreak: absentStreaks.get(m.id) ?? 0, status: null };
       }
       const raw = eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
       const status = raw === "not_attending" ? "tidak_hadir" : raw;
-      return { ...m, counts: null, status };
+      return { ...m, counts: null, rate: null, absentStreak: null, status };
     });
-  }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap]);
+  }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap, absentStreaks]);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) ?? null,
@@ -299,6 +318,8 @@ export default function AttendanceReportPage() {
                         <th className="px-4 py-3 text-center font-semibold">Tentative</th>
                         <th className="px-4 py-3 text-center font-semibold">Tidak Hadir</th>
                         <th className="px-4 py-3 text-center font-semibold">Total</th>
+                        <th className="px-4 py-3 text-center font-semibold">Rate</th>
+                        <th className="px-4 py-3 text-center font-semibold">Streak</th>
                       </>
                     ) : (
                       <>
@@ -320,6 +341,16 @@ export default function AttendanceReportPage() {
                           <td className="px-4 py-3 text-center font-bold text-red-400">{row.counts.tidak_hadir}</td>
                           <td className="px-4 py-3 text-center font-bold text-[#f2f3f5]">
                             {row.counts.hadir + row.counts.tentative + row.counts.tidak_hadir}
+                          </td>
+                          <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">
+                            {row.rate}%
+                          </td>
+                          <td className={`px-4 py-3 text-center font-bold ${
+                            row.absentStreak && row.absentStreak >= 3
+                              ? "text-red-400"
+                              : "text-[#f2f3f5]"
+                          }`}>
+                            {row.absentStreak}
                           </td>
                         </>
                       ) : (
@@ -397,20 +428,40 @@ export default function AttendanceReportPage() {
                     <span className="text-[#b5bac1]/70">Job:</span> {formatJob(row.job)}
                   </p>
                   {row.counts && (
-                    <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                      <div>
-                        <p className="text-xs text-[#b5bac1]">Hadir</p>
-                        <p className="font-bold text-[#3ba55d]">{row.counts.hadir}</p>
+                    <>
+                      <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div>
+                          <p className="text-xs text-[#b5bac1]">Hadir</p>
+                          <p className="font-bold text-[#3ba55d]">{row.counts.hadir}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#b5bac1]">Tentative</p>
+                          <p className="font-bold text-[#faa61a]">{row.counts.tentative}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
+                          <p className="font-bold text-red-400">{row.counts.tidak_hadir}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-[#b5bac1]">Tentative</p>
-                        <p className="font-bold text-[#faa61a]">{row.counts.tentative}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-center text-sm">
+                        <div>
+                          <p className="text-xs text-[#b5bac1]">Rate</p>
+                          <p className="font-bold text-[#3ba55d]">{row.rate}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#b5bac1]">Streak</p>
+                          <p
+                            className={`font-bold ${
+                              row.absentStreak && row.absentStreak >= 3
+                                ? "text-red-400"
+                                : "text-[#f2f3f5]"
+                            }`}
+                          >
+                            {row.absentStreak}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
-                        <p className="font-bold text-red-400">{row.counts.tidak_hadir}</p>
-                      </div>
-                    </div>
+                    </>
                   )}
 
                   {selectedEventId != null && (
