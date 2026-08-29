@@ -21,6 +21,7 @@ type AttendanceRecord = {
   member_id: number;
   event_id: number;
   status: string;
+  reason: string | null;
 };
 
 type Counts = {
@@ -92,7 +93,7 @@ export default function AttendanceReportPage() {
       const [{ data: membersData, error: membersError }, { data: eventsData, error: eventsError }, { data: recordsData, error: recordsError }] = await Promise.all([
         supabase.from("members").select("id, ign, job, is_active").order("ign", { ascending: true }),
         supabase.from("events").select("id, name, event_date").order("event_date", { ascending: false }),
-        supabase.from("event_attendance").select("member_id, event_id, status"),
+        supabase.from("event_attendance").select("member_id, event_id, status, reason"),
       ]);
 
       if (membersError) {
@@ -229,6 +230,17 @@ export default function AttendanceReportPage() {
     return counts;
   }, [selectedEventId, members, eventStatusMap]);
 
+  const reasonSummary = useMemo(() => {
+    const map = new Map<string, number>();
+    records.forEach((r) => {
+      if (r.status !== "tidak_hadir" && r.status !== "not_attending") return;
+      if (selectedEventId != null && r.event_id !== selectedEventId) return;
+      const key = r.reason?.trim() || "No reason";
+      map.set(key, (map.get(key) ?? 0) + 1);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [selectedEventId, records]);
+
   async function updateAttendance(memberId: number, newStatus: string) {
     if (!selectedEventId) return;
     setSavingMemberId(memberId);
@@ -273,7 +285,12 @@ export default function AttendanceReportPage() {
         }
         return [
           ...prev,
-          { member_id: memberId, event_id: selectedEventId, status: newStatus },
+          {
+            member_id: memberId,
+            event_id: selectedEventId,
+            status: newStatus,
+            reason: null,
+          },
         ];
       });
     } catch (err) {
@@ -364,6 +381,27 @@ export default function AttendanceReportPage() {
               <p className="text-xl font-bold text-[#f2f3f5]">
                 {selectedEventCounts.no_response}
               </p>
+            </div>
+          </section>
+        )}
+
+        {reasonSummary.length > 0 && (
+          <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
+            <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
+              {selectedEventId == null
+                ? "All Absence Reasons"
+                : "Absence Reasons for This Event"}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {reasonSummary.map(([reason, count]) => (
+                <div
+                  key={reason}
+                  className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm text-[#f2f3f5] ring-1 ring-white/5"
+                >
+                  <span className="font-medium text-[#f2f3f5]">{reason}</span>{" "}
+                  <span className="text-[#b5bac1]">({count})</span>
+                </div>
+              ))}
             </div>
           </section>
         )}
