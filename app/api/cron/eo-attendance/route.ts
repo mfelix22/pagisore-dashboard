@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
         name: EO_EVENT_NAME,
         event_type: EO_EVENT_TYPE,
         event_date: eventDate,
+        event_time: "19:55:00",
       })
       .select("id")
       .single();
