@@ -235,6 +235,7 @@ export default function AttendanceReportPage() {
       ign: string;
       reason: string;
       status: "tidak_hadir" | "no_response";
+      hasReason: boolean;
       eventName?: string;
       eventDate?: string;
     }[] = [];
@@ -252,12 +253,16 @@ export default function AttendanceReportPage() {
         const member = membersById.get(r.member_id);
         if (!member) return;
         const isNoResponse = r.status === "no_response";
+        const isTidakHadir =
+          r.status === "tidak_hadir" || r.status === "not_attending";
+        const reasonText = isTidakHadir
+          ? r.reason?.trim() || "No reason"
+          : "No response";
         list.push({
           ign: member.ign,
           status: isNoResponse ? "no_response" : "tidak_hadir",
-          reason: isNoResponse
-            ? "No response"
-            : r.reason?.trim() || "No reason",
+          hasReason: isTidakHadir && !!r.reason?.trim(),
+          reason: reasonText,
         });
       });
     } else {
@@ -275,6 +280,7 @@ export default function AttendanceReportPage() {
         list.push({
           ign: member.ign,
           status: "tidak_hadir",
+          hasReason: !!r.reason?.trim(),
           reason: r.reason?.trim() || "No reason",
           eventName: event?.name,
           eventDate: event?.event_date
@@ -288,6 +294,17 @@ export default function AttendanceReportPage() {
 
   async function updateAttendance(memberId: number, newStatus: string) {
     if (!selectedEventId) return;
+
+    let reason: string | null = null;
+    if (newStatus === "tidak_hadir") {
+      const input = window.prompt("Reason for Tidak Hadir (optional):");
+      if (input === null) {
+        setEditingMemberId(null);
+        return;
+      }
+      reason = input.trim() || null;
+    }
+
     setSavingMemberId(memberId);
     setLoadError(null);
 
@@ -299,6 +316,7 @@ export default function AttendanceReportPage() {
           memberId,
           eventId: selectedEventId,
           status: newStatus,
+          reason,
         }),
       });
 
@@ -325,7 +343,7 @@ export default function AttendanceReportPage() {
         );
         if (index >= 0) {
           const next = [...prev];
-          next[index] = { ...next[index], status: newStatus };
+          next[index] = { ...next[index], status: newStatus, reason };
           return next;
         }
         return [
@@ -334,7 +352,7 @@ export default function AttendanceReportPage() {
             member_id: memberId,
             event_id: selectedEventId,
             status: newStatus,
-            reason: null,
+            reason,
           },
         ];
       });
@@ -447,20 +465,24 @@ export default function AttendanceReportPage() {
                   <span
                     className={`ml-2 inline-flex rounded px-2 py-0.5 text-xs font-semibold ${
                       item.status === "tidak_hadir"
-                        ? "bg-red-500/15 text-red-400"
+                        ? item.hasReason
+                          ? "bg-red-500/15 text-red-400"
+                          : "bg-orange-500/15 text-orange-400"
                         : "bg-[#383a40] text-[#b5bac1]"
                     }`}
                   >
                     {item.status === "tidak_hadir"
-                      ? "Can\'t attend"
-                      : "Didn\'t respond"}
+                      ? item.hasReason
+                        ? "Can\'t attend"
+                        : "No reason"
+                      : "Not in attendance"}
                   </span>
                   {selectedEventId == null && item.eventName && (
                     <span className="ml-1 text-xs text-[#b5bac1]">
                       ({item.eventName} — {item.eventDate})
                     </span>
                   )}
-                  {item.status === "tidak_hadir" && (
+                  {item.status === "tidak_hadir" && item.hasReason && (
                     <span className="ml-1 text-[#b5bac1]">
                       — {item.reason}
                     </span>

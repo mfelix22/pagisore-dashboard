@@ -35,11 +35,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { memberId, eventId, status } = body as {
+  const { memberId, eventId, status, reason } = body as {
     memberId: number;
     eventId: number;
     status: string;
+    reason?: string | null;
   };
+
+  const trimmedReason =
+    typeof reason === "string" ? (reason.trim() || null) : null;
 
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -55,7 +59,12 @@ export async function POST(req: NextRequest) {
       const { error } = await supabaseAdmin
         .from("event_attendance")
         .upsert(
-          { member_id: memberId, event_id: eventId, status },
+          {
+            member_id: memberId,
+            event_id: eventId,
+            status,
+            reason: status === "tidak_hadir" ? trimmedReason : null,
+          },
           { onConflict: "member_id,event_id" }
         );
       if (error) throw error;
