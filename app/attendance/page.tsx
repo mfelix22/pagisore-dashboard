@@ -452,17 +452,15 @@ export default function AttendanceReportPage() {
           </section>
         )}
 
-        {personalReasons.length > 0 && (
+        {selectedEventId != null && personalReasons.length > 0 && (
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
             <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
-              {selectedEventId == null
-                ? "Latest Event — Not Attending"
-                : "Who Can\'t / Didn\'t Attend"}
+              Who Can\'t / Didn\'t Attend
             </h2>
             <div className="space-y-2">
               {personalReasons.map((item) => (
                 <div
-                  key={`${item.ign}-${item.eventDate ?? "all"}`}
+                  key={item.ign}
                   className="rounded-lg bg-[#1e1f22] px-3 py-2 text-sm ring-1 ring-white/5"
                 >
                   <span className="font-medium text-[#f2f3f5]">{item.ign}</span>
@@ -481,11 +479,6 @@ export default function AttendanceReportPage() {
                         : "No reason"
                       : "No response"}
                   </span>
-                  {selectedEventId == null && item.eventName && (
-                    <span className="ml-1 text-xs text-[#b5bac1]">
-                      ({item.eventName} — {item.eventDate})
-                    </span>
-                  )}
                   {item.status === "tidak_hadir" && item.hasReason && (
                     <span className="ml-1 text-[#b5bac1]">
                       — {item.reason}
@@ -505,6 +498,22 @@ export default function AttendanceReportPage() {
           <p className="text-sm text-[#b5bac1]">No members found.</p>
         ) : (
           <>
+            <div className="mb-4 flex flex-wrap gap-4 rounded-xl bg-[#2b2d31] p-3 ring-1 ring-white/5">
+              {[
+                { color: "bg-[#3ba55d]", label: "Hadir" },
+                { color: "bg-[#faa61a]", label: "Tentative" },
+                { color: "bg-red-400", label: "Tidak Hadir" },
+                { color: "bg-[#383a40]", label: "No Response" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-2">
+                  <span
+                    className={`h-4 w-4 rounded ${item.color}`}
+                  />
+                  <span className="text-xs text-[#b5bac1]">{item.label}</span>
+                </div>
+              ))}
+            </div>
+
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
               <table className="w-full min-w-max text-left text-sm">
