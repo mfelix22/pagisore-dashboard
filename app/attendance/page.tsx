@@ -345,12 +345,16 @@ export default function AttendanceReportPage() {
                           <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">
                             {row.rate}%
                           </td>
-                          <td className={`px-4 py-3 text-center font-bold ${
-                            row.absentStreak && row.absentStreak >= 3
-                              ? "text-red-400"
-                              : "text-[#f2f3f5]"
-                          }`}>
-                            {row.absentStreak}
+                          <td className="px-4 py-3 text-center">
+                            {row.absentStreak && row.absentStreak >= 3 ? (
+                              <span className="inline-flex rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-400">
+                                {row.absentStreak} streak
+                              </span>
+                            ) : (
+                              <span className="font-bold text-[#f2f3f5]">
+                                {row.absentStreak}
+                              </span>
+                            )}
                           </td>
                         </>
                       ) : (
@@ -450,15 +454,15 @@ export default function AttendanceReportPage() {
                         </div>
                         <div>
                           <p className="text-xs text-[#b5bac1]">Streak</p>
-                          <p
-                            className={`font-bold ${
-                              row.absentStreak && row.absentStreak >= 3
-                                ? "text-red-400"
-                                : "text-[#f2f3f5]"
-                            }`}
-                          >
-                            {row.absentStreak}
-                          </p>
+                          {row.absentStreak && row.absentStreak >= 3 ? (
+                            <span className="inline-flex rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-400">
+                              {row.absentStreak}
+                            </span>
+                          ) : (
+                            <p className="font-bold text-[#f2f3f5]">
+                              {row.absentStreak}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </>
