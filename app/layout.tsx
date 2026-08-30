@@ -58,6 +58,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               >
                 Attendance
               </Link>
+              <Link
+                href="/settings"
+                className="text-sm font-medium text-[#b5bac1] hover:text-white"
+              >
+                Settings - Attendance Post
+              </Link>
             </nav>
           </div>
         </header>
