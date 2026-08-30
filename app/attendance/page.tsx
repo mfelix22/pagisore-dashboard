@@ -26,6 +26,7 @@ type AttendanceRecord = {
 
 type Counts = {
   hadir: number;
+  izin: number;
   tentative: number;
   tidak_hadir: number;
 };
@@ -50,6 +51,9 @@ function getStatusStyle(status: string) {
   if (status === "hadir") {
     return "bg-[#3ba55d]/15 text-[#3ba55d]";
   }
+  if (status === "izin") {
+    return "bg-[#faa61a]/15 text-[#faa61a]";
+  }
   if (status === "tidak_hadir" || status === "not_attending") {
     return "bg-red-500/15 text-red-400";
   }
@@ -58,12 +62,14 @@ function getStatusStyle(status: string) {
 
 function getTimelineDotColor(status: string) {
   if (status === "hadir") return "bg-[#3ba55d]";
+  if (status === "izin") return "bg-[#faa61a]";
   if (status === "tidak_hadir") return "bg-red-400";
   return "bg-[#383a40]";
 }
 
 function getStatusDisplay(status: string) {
   if (status === "hadir") return "Hadir";
+  if (status === "izin") return "Izin";
   if (status === "tidak_hadir" || status === "not_attending") return "Tidak Hadir";
   return "No response";
 }
@@ -129,10 +135,11 @@ export default function AttendanceReportPage() {
     const map = new Map<number, Counts>();
     records.forEach((r) => {
       if (!map.has(r.member_id)) {
-        map.set(r.member_id, { hadir: 0, tentative: 0, tidak_hadir: 0 });
+        map.set(r.member_id, { hadir: 0, izin: 0, tentative: 0, tidak_hadir: 0 });
       }
       const c = map.get(r.member_id)!;
       if (r.status === "hadir") c.hadir++;
+      else if (r.status === "izin") c.izin++;
       else if (r.status === "tentative") c.tentative++;
       else if (r.status === "tidak_hadir" || r.status === "not_attending") c.tidak_hadir++;
     });
@@ -194,8 +201,8 @@ export default function AttendanceReportPage() {
   const tableRows = useMemo(() => {
     return filteredMembers.map((m) => {
       if (selectedEventId == null) {
-        const counts = memberCounts.get(m.id) ?? { hadir: 0, tentative: 0, tidak_hadir: 0 };
-        const total = counts.hadir + counts.tidak_hadir;
+        const counts = memberCounts.get(m.id) ?? { hadir: 0, izin: 0, tentative: 0, tidak_hadir: 0 };
+        const total = counts.hadir + counts.izin + counts.tidak_hadir;
         const rate = total > 0 ? Math.round((counts.hadir / total) * 100) : 0;
         return {
           ...m,
@@ -246,13 +253,13 @@ export default function AttendanceReportPage() {
 
   const selectedEventCounts = useMemo(() => {
     if (selectedEventId == null) return null;
-    const counts = { hadir: 0, tentative: 0, tidak_hadir: 0, no_response: 0 };
+    const counts = { hadir: 0, izin: 0, tidak_hadir: 0, no_response: 0 };
     members.forEach((m) => {
       const raw =
         eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
       const status = raw === "not_attending" ? "tidak_hadir" : raw;
       if (status === "hadir") counts.hadir++;
-      else if (status === "tentative") counts.tentative++;
+      else if (status === "izin") counts.izin++;
       else if (status === "tidak_hadir") counts.tidak_hadir++;
       else counts.no_response++;
     });
@@ -274,6 +281,7 @@ export default function AttendanceReportPage() {
       records.forEach((r) => {
         if (r.event_id !== selectedEventId) return;
         if (
+          r.status !== "izin" &&
           r.status !== "tidak_hadir" &&
           r.status !== "not_attending" &&
           r.status !== "no_response"
@@ -284,13 +292,17 @@ export default function AttendanceReportPage() {
         const isNoResponse = r.status === "no_response";
         const isTidakHadir =
           r.status === "tidak_hadir" || r.status === "not_attending";
-        const reasonText = isTidakHadir
+        const isIzin = r.status === "izin";
+        const reasonText = isTidakHadir || isIzin
           ? r.reason?.trim() || "No reason"
           : "No response";
+        let status = "tidak_hadir";
+        if (isNoResponse) status = "no_response";
+        else if (isIzin) status = "izin";
         list.push({
           ign: member.ign,
-          status: isNoResponse ? "no_response" : "tidak_hadir",
-          hasReason: isTidakHadir && !!r.reason?.trim(),
+          status,
+          hasReason: (isTidakHadir || isIzin) && !!r.reason?.trim(),
           reason: reasonText,
         });
       });
@@ -307,11 +319,12 @@ export default function AttendanceReportPage() {
           if (status === "hadir") return;
           const record = recordsByKey.get(`${m.id}-${latestEvent.id}`);
           const isTidakHadir = status === "tidak_hadir";
+          const isIzin = status === "izin";
           list.push({
             ign: m.ign,
             status,
-            hasReason: isTidakHadir && !!record?.reason?.trim(),
-            reason: isTidakHadir
+            hasReason: (isTidakHadir || isIzin) && !!record?.reason?.trim(),
+            reason: isTidakHadir || isIzin
               ? record?.reason?.trim() || "No reason"
               : "No response",
             eventName: latestEvent.name,
@@ -329,8 +342,8 @@ export default function AttendanceReportPage() {
     if (!selectedEventId) return;
 
     let reason: string | null = null;
-    if (newStatus === "tidak_hadir") {
-      const input = window.prompt("Reason for Tidak Hadir (optional):");
+    if (newStatus === "izin") {
+      const input = window.prompt("Reason for Izin (optional):");
       if (input === null) {
         setEditingMemberId(null);
         return;
@@ -428,15 +441,15 @@ export default function AttendanceReportPage() {
         const originalStatus =
           original === "not_attending" ? "tidak_hadir" : original;
         const newStatus = pendingStatus[m.id] ?? originalStatus;
-        const newReason =
-          newStatus === "tidak_hadir" ? (pendingReasons[m.id]?.trim() || null) : null;
+        const needsReason = newStatus === "izin";
+        const newReason = needsReason ? (pendingReasons[m.id]?.trim() || null) : null;
 
         const statusChanged = newStatus !== originalStatus;
         const record = records.find(
           (r) => r.member_id === m.id && r.event_id === selectedEventId
         );
         const reasonChanged =
-          newStatus === "tidak_hadir" &&
+          needsReason &&
           (!!record?.reason || !!newReason) &&
           (record?.reason?.trim() || null) !== newReason;
 
@@ -581,11 +594,17 @@ export default function AttendanceReportPage() {
         )}
 
         {selectedEventCounts && (
-          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
               <p className="text-xs text-[#b5bac1]">Hadir</p>
               <p className="text-xl font-bold text-[#3ba55d]">
                 {selectedEventCounts.hadir}
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
+              <p className="text-xs text-[#b5bac1]">Izin</p>
+              <p className="text-xl font-bold text-[#faa61a]">
+                {selectedEventCounts.izin}
               </p>
             </div>
             <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
@@ -616,21 +635,13 @@ export default function AttendanceReportPage() {
                 >
                   <span className="font-medium text-[#f2f3f5]">{item.ign}</span>
                   <span
-                    className={`ml-2 inline-flex rounded px-2 py-0.5 text-xs font-semibold ${
-                      item.status === "tidak_hadir"
-                        ? item.hasReason
-                          ? "bg-red-500/15 text-red-400"
-                          : "bg-orange-500/15 text-orange-400"
-                        : "bg-[#383a40] text-[#b5bac1]"
-                    }`}
+                    className={`ml-2 inline-flex rounded px-2 py-0.5 text-xs font-semibold ${getStatusStyle(
+                      item.status
+                    )}`}
                   >
-                    {item.status === "tidak_hadir"
-                      ? item.hasReason
-                        ? "Can\'t attend"
-                        : "No reason"
-                      : "No response"}
+                    {getStatusDisplay(item.status)}
                   </span>
-                  {item.status === "tidak_hadir" && item.hasReason && (
+                  {item.hasReason && (
                     <span className="ml-1 text-[#b5bac1]">
                       — {item.reason}
                     </span>
@@ -652,6 +663,7 @@ export default function AttendanceReportPage() {
             <div className="mb-4 flex flex-wrap gap-4 rounded-xl bg-[#2b2d31] p-3 ring-1 ring-white/5">
               {[
                 { color: "bg-[#3ba55d]", label: "Hadir" },
+                { color: "bg-[#faa61a]", label: "Izin" },
                 { color: "bg-red-400", label: "Tidak Hadir" },
                 { color: "bg-[#383a40]", label: "No Response" },
               ].map((item) => (
@@ -684,6 +696,7 @@ export default function AttendanceReportPage() {
                           </th>
                         ))}
                         <th className="px-4 py-3 text-center font-semibold">Hadir</th>
+                        <th className="px-4 py-3 text-center font-semibold">Izin</th>
                         <th className="px-4 py-3 text-center font-semibold">Tidak Hadir</th>
                         <th className="px-4 py-3 text-center font-semibold">Total</th>
                         <th className="px-4 py-3 text-center font-semibold">Rate</th>
@@ -722,9 +735,10 @@ export default function AttendanceReportPage() {
                             </td>
                           ))}
                           <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">{row.counts.hadir}</td>
+                          <td className="px-4 py-3 text-center font-bold text-[#faa61a]">{row.counts.izin}</td>
                           <td className="px-4 py-3 text-center font-bold text-red-400">{row.counts.tidak_hadir}</td>
                           <td className="px-4 py-3 text-center font-bold text-[#f2f3f5]">
-                            {row.counts.hadir + row.counts.tidak_hadir}
+                            {row.counts.hadir + row.counts.izin + row.counts.tidak_hadir}
                           </td>
                           <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">
                             {row.rate}%
@@ -759,10 +773,11 @@ export default function AttendanceReportPage() {
                                   className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                                 >
                                   <option value="hadir">Hadir</option>
+                                  <option value="izin">Izin</option>
                                   <option value="tidak_hadir">Tidak Hadir</option>
                                   <option value="no_response">No response</option>
                                 </select>
-                                {(pendingStatus[row.id] ?? row.status ?? "no_response") === "tidak_hadir" && (
+                                {(pendingStatus[row.id] ?? row.status ?? "no_response") === "izin" && (
                                   <input
                                     type="text"
                                     value={pendingReasons[row.id] ?? ""}
@@ -787,7 +802,8 @@ export default function AttendanceReportPage() {
                                 className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                               >
                                 <option value="hadir">Hadir</option>
-                                <option value="tidak_hadir">Tidak Hadir</option>
+                                <option value="izin">Izin</option>
+                                  <option value="tidak_hadir">Tidak Hadir</option>
                                 <option value="no_response">No response</option>
                               </select>
                             ) : (
@@ -846,7 +862,7 @@ export default function AttendanceReportPage() {
                       </span>
                     ) : (
                       <span className="text-sm text-[#b5bac1]">
-                        Total: {row.counts ? row.counts.hadir + row.counts.tidak_hadir : 0}
+                        Total: {row.counts ? row.counts.hadir + row.counts.izin + row.counts.tidak_hadir : 0}
                       </span>
                     )}
                   </div>
@@ -855,10 +871,14 @@ export default function AttendanceReportPage() {
                   </p>
                   {row.counts && (
                     <>
-                      <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                      <div className="grid grid-cols-4 gap-2 text-center text-sm">
                         <div>
                           <p className="text-xs text-[#b5bac1]">Hadir</p>
                           <p className="font-bold text-[#3ba55d]">{row.counts.hadir}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#b5bac1]">Izin</p>
+                          <p className="font-bold text-[#faa61a]">{row.counts.izin}</p>
                         </div>
                         <div>
                           <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
@@ -916,10 +936,11 @@ export default function AttendanceReportPage() {
                             className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                           >
                             <option value="hadir">Hadir</option>
-                            <option value="tidak_hadir">Tidak Hadir</option>
+                            <option value="izin">Izin</option>
+                                  <option value="tidak_hadir">Tidak Hadir</option>
                             <option value="no_response">No response</option>
                           </select>
-                          {(pendingStatus[row.id] ?? row.status ?? "no_response") === "tidak_hadir" && (
+                          {(pendingStatus[row.id] ?? row.status ?? "no_response") === "izin" && (
                             <input
                               type="text"
                               value={pendingReasons[row.id] ?? ""}
@@ -944,7 +965,8 @@ export default function AttendanceReportPage() {
                           className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                         >
                           <option value="hadir">Hadir</option>
-                          <option value="tidak_hadir">Tidak Hadir</option>
+                          <option value="izin">Izin</option>
+                                  <option value="tidak_hadir">Tidak Hadir</option>
                           <option value="no_response">No response</option>
                         </select>
                       ) : (

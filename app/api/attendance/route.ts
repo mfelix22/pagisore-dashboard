@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
             event_id: eventId,
             discord_username: memberData.ign,
             status,
-            reason: status === "tidak_hadir" ? trimmedReason : null,
+            reason: status === "izin" ? trimmedReason : null,
           },
           { onConflict: "member_id,event_id" }
         );
