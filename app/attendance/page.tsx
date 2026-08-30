@@ -99,7 +99,10 @@ export default function AttendanceReportPage() {
         setLoadError(`Failed to load members: ${membersError.message}`);
         setMembers([]);
       } else {
-        setMembers((membersData as Member[]) ?? []);
+        const active = ((membersData as Member[]) ?? []).filter(
+          (m) => m.is_active
+        );
+        setMembers(active);
       }
 
       if (eventsError) {
@@ -561,22 +564,13 @@ export default function AttendanceReportPage() {
             <p className="text-sm text-[#b5bac1]">
               Update each row and click Save.
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setBulkMode(false)}
-                disabled={bulkSaving}
-                className="rounded-md bg-[#383a40] px-4 py-1.5 text-sm font-medium text-[#f2f3f5] hover:bg-[#2b2d31] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={bulkUpdateAttendance}
-                disabled={bulkSaving}
-                className="rounded-md bg-[#3ba55d] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#2d7c46] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {bulkSaving ? "Saving..." : "Save"}
-              </button>
-            </div>
+            <button
+              onClick={bulkUpdateAttendance}
+              disabled={bulkSaving}
+              className="rounded-md bg-[#3ba55d] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#2d7c46] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {bulkSaving ? "Saving..." : "Save"}
+            </button>
           </section>
         )}
 
