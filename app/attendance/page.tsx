@@ -79,10 +79,10 @@ export default function AttendanceReportPage() {
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
   const [savingMemberId, setSavingMemberId] = useState<number | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [bulkStatus, setBulkStatus] = useState("hadir");
-  const [bulkReason, setBulkReason] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<Record<number, string>>({});
+  const [pendingReasons, setPendingReasons] = useState<Record<number, string>>({});
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkInit, setBulkInit] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -208,6 +208,33 @@ export default function AttendanceReportPage() {
       return { ...m, counts: null, rate: null, absentStreak: null, timeline: null, status };
     });
   }, [filteredMembers, selectedEventId, memberCounts, eventStatusMap, absentStreaks, memberTimelines]);
+
+  useEffect(() => {
+    if (bulkMode && !bulkInit && selectedEventId != null) {
+      const initialStatus: Record<number, string> = {};
+      const initialReasons: Record<number, string> = {};
+      filteredMembers.forEach((m) => {
+        const raw =
+          eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
+        const status = raw === "not_attending" ? "tidak_hadir" : raw;
+        initialStatus[m.id] = status;
+        const record = records.find(
+          (r) => r.member_id === m.id && r.event_id === selectedEventId
+        );
+        if (record?.reason) {
+          initialReasons[m.id] = record.reason;
+        }
+      });
+      setPendingStatus(initialStatus);
+      setPendingReasons(initialReasons);
+      setBulkInit(true);
+    }
+    if (!bulkMode && bulkInit) {
+      setPendingStatus({});
+      setPendingReasons({});
+      setBulkInit(false);
+    }
+  }, [bulkMode, bulkInit, selectedEventId, filteredMembers, eventStatusMap, records]);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) ?? null,
@@ -384,28 +411,43 @@ export default function AttendanceReportPage() {
   }
 
   async function bulkUpdateAttendance() {
-    if (!selectedEventId || selectedIds.size === 0 || bulkSaving) return;
-
-    const reason =
-      bulkStatus === "tidak_hadir" ? (bulkReason.trim() || null) : null;
+    if (!selectedEventId || !bulkInit || bulkSaving) return;
 
     setBulkSaving(true);
     setLoadError(null);
 
-    const ids = Array.from(selectedIds);
-    const failures: number[] = [];
+    const failures: { id: number; error: string }[] = [];
 
     try {
-      for (const memberId of ids) {
+      for (const m of filteredMembers) {
+        const original =
+          eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
+        const originalStatus =
+          original === "not_attending" ? "tidak_hadir" : original;
+        const newStatus = pendingStatus[m.id] ?? originalStatus;
+        const newReason =
+          newStatus === "tidak_hadir" ? (pendingReasons[m.id]?.trim() || null) : null;
+
+        const statusChanged = newStatus !== originalStatus;
+        const record = records.find(
+          (r) => r.member_id === m.id && r.event_id === selectedEventId
+        );
+        const reasonChanged =
+          newStatus === "tidak_hadir" &&
+          (!!record?.reason || !!newReason) &&
+          (record?.reason?.trim() || null) !== newReason;
+
+        if (!statusChanged && !reasonChanged) continue;
+
         try {
           const res = await fetch("/api/attendance", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              memberId,
+              memberId: m.id,
               eventId: selectedEventId,
-              status: bulkStatus,
-              reason,
+              status: newStatus,
+              reason: newReason,
             }),
           });
 
@@ -421,20 +463,24 @@ export default function AttendanceReportPage() {
             throw new Error(data.error || "Failed to update attendance");
           }
         } catch (err) {
-          console.error(`Bulk update failed for member ${memberId}:`, err);
-          failures.push(memberId);
+          const message =
+            err && typeof err === "object" && "message" in err
+              ? String((err as { message: unknown }).message)
+              : "Failed";
+          console.error(`Bulk update failed for member ${m.id}:`, err);
+          failures.push({ id: m.id, error: message });
         }
       }
 
       await loadRecords();
 
       if (failures.length > 0) {
-        throw new Error(`Failed to update ${failures.length} member(s).`);
+        throw new Error(
+          `Failed to update ${failures.length} member(s).`
+        );
       }
 
-      setSelectedIds(new Set());
       setBulkMode(false);
-      setBulkReason("");
     } catch (err) {
       console.error("Bulk update failed:", err);
       const errorMessage =
@@ -445,32 +491,6 @@ export default function AttendanceReportPage() {
     } finally {
       setBulkSaving(false);
     }
-  }
-
-  const visibleMemberIds = filteredMembers.map((m) => m.id);
-  const allVisibleSelected =
-    visibleMemberIds.length > 0 &&
-    visibleMemberIds.every((id) => selectedIds.has(id));
-
-  function toggleMemberSelection(id: number) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (allVisibleSelected) {
-        visibleMemberIds.forEach((id) => next.delete(id));
-      } else {
-        visibleMemberIds.forEach((id) => next.add(id));
-      }
-      return next;
-    });
   }
 
   return (
@@ -498,8 +518,6 @@ export default function AttendanceReportPage() {
                 setEditingMemberId(null);
                 setSavingMemberId(null);
                 setBulkMode(false);
-                setSelectedIds(new Set());
-                setBulkReason("");
               }}
               className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-3 text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] sm:w-80"
             >
@@ -516,10 +534,8 @@ export default function AttendanceReportPage() {
               <button
                 onClick={() => {
                   setBulkMode((prev) => !prev);
-                  setSelectedIds(new Set());
                   setEditingMemberId(null);
                   setSavingMemberId(null);
-                  setBulkReason("");
                 }}
                 className={`rounded-lg px-4 py-3 text-sm font-medium transition ${
                   bulkMode
@@ -527,7 +543,7 @@ export default function AttendanceReportPage() {
                     : "bg-[#5865f2] text-white hover:bg-[#4752c4]"
                 }`}
               >
-                {bulkMode ? "Cancel Bulk" : "Bulk Edit"}
+                {bulkMode ? "Cancel" : "Bulk Edit"}
               </button>
             )}
             <input
@@ -541,37 +557,26 @@ export default function AttendanceReportPage() {
         </section>
 
         {bulkMode && (
-          <section className="mb-4 flex flex-wrap items-end gap-3 rounded-xl bg-[#2b2d31] p-3 ring-1 ring-white/5">
-            <div>
-              <p className="mb-1 text-xs text-[#b5bac1]">
-                {selectedIds.size} selected
-              </p>
-              <select
-                value={bulkStatus}
-                onChange={(e) => setBulkStatus(e.target.value)}
-                className="rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+          <section className="mb-4 flex items-center justify-between rounded-xl bg-[#2b2d31] p-3 ring-1 ring-white/5">
+            <p className="text-sm text-[#b5bac1]">
+              Update each row and click Save.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setBulkMode(false)}
+                disabled={bulkSaving}
+                className="rounded-md bg-[#383a40] px-4 py-1.5 text-sm font-medium text-[#f2f3f5] hover:bg-[#2b2d31] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="hadir">Hadir</option>
-                <option value="tidak_hadir">Tidak Hadir</option>
-                <option value="no_response">No response</option>
-              </select>
+                Cancel
+              </button>
+              <button
+                onClick={bulkUpdateAttendance}
+                disabled={bulkSaving}
+                className="rounded-md bg-[#3ba55d] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#2d7c46] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {bulkSaving ? "Saving..." : "Save"}
+              </button>
             </div>
-            {bulkStatus === "tidak_hadir" && (
-              <input
-                type="text"
-                value={bulkReason}
-                onChange={(e) => setBulkReason(e.target.value)}
-                placeholder="Reason (applied to all selected)"
-                className="min-w-[16rem] rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] placeholder-[#b5bac1] focus:border-[#5865f2] focus:outline-none"
-              />
-            )}
-            <button
-              onClick={bulkUpdateAttendance}
-              disabled={selectedIds.size === 0 || bulkSaving}
-              className="rounded-md bg-[#3ba55d] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#2d7c46] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {bulkSaving ? "Saving..." : "Apply"}
-            </button>
           </section>
         )}
 
@@ -694,18 +699,7 @@ export default function AttendanceReportPage() {
                       <>
                         <th className="px-4 py-3 font-semibold">Job</th>
                         <th className="px-4 py-3 text-center font-semibold">Status</th>
-                        <th className="px-4 py-3 text-center font-semibold">
-                          {bulkMode ? (
-                            <input
-                              type="checkbox"
-                              checked={allVisibleSelected}
-                              onChange={toggleSelectAll}
-                              className="h-4 w-4 accent-[#5865f2]"
-                            />
-                          ) : (
-                            "Actions"
-                          )}
-                        </th>
+                        <th className="px-4 py-3 text-center font-semibold">Actions</th>
                       </>
                     )}
                   </tr>
@@ -756,8 +750,40 @@ export default function AttendanceReportPage() {
                       ) : (
                         <>
                           <td className="px-4 py-3 text-[#b5bac1]">{formatJob(row.job)}</td>
-                          <td className="px-4 py-3 text-center">
-                            {editingMemberId === row.id ? (
+                          <td className="px-4 py-3 text-center align-middle">
+                            {bulkMode ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <select
+                                  value={pendingStatus[row.id] ?? row.status ?? "no_response"}
+                                  onChange={(e) => {
+                                    setPendingStatus((prev) => ({
+                                      ...prev,
+                                      [row.id]: e.target.value,
+                                    }));
+                                  }}
+                                  disabled={bulkSaving}
+                                  className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+                                >
+                                  <option value="hadir">Hadir</option>
+                                  <option value="tidak_hadir">Tidak Hadir</option>
+                                  <option value="no_response">No response</option>
+                                </select>
+                                {(pendingStatus[row.id] ?? row.status ?? "no_response") === "tidak_hadir" && (
+                                  <input
+                                    type="text"
+                                    value={pendingReasons[row.id] ?? ""}
+                                    onChange={(e) =>
+                                      setPendingReasons((prev) => ({
+                                        ...prev,
+                                        [row.id]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder="Reason"
+                                    className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-xs text-[#f2f3f5] placeholder-[#b5bac1] focus:border-[#5865f2] focus:outline-none"
+                                  />
+                                )}
+                              </div>
+                            ) : editingMemberId === row.id ? (
                               <select
                                 value={row.status ?? "no_response"}
                                 onChange={(e) =>
@@ -767,7 +793,6 @@ export default function AttendanceReportPage() {
                                 className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                               >
                                 <option value="hadir">Hadir</option>
-                
                                 <option value="tidak_hadir">Tidak Hadir</option>
                                 <option value="no_response">No response</option>
                               </select>
@@ -778,31 +803,26 @@ export default function AttendanceReportPage() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {bulkMode ? (
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.has(row.id)}
-                                onChange={() => toggleMemberSelection(row.id)}
-                                className="h-4 w-4 accent-[#5865f2]"
-                              />
-                            ) : editingMemberId === row.id ? (
-                              savingMemberId === row.id ? (
-                                <span className="text-xs text-[#b5bac1]">Saving...</span>
+                            {!bulkMode && (
+                              editingMemberId === row.id ? (
+                                savingMemberId === row.id ? (
+                                  <span className="text-xs text-[#b5bac1]">Saving...</span>
+                                ) : (
+                                  <button
+                                    onClick={() => setEditingMemberId(null)}
+                                    className="rounded-md bg-[#383a40] px-2 py-1 text-xs font-medium text-[#f2f3f5] hover:bg-[#2b2d31]"
+                                  >
+                                    Cancel
+                                  </button>
+                                )
                               ) : (
                                 <button
-                                  onClick={() => setEditingMemberId(null)}
-                                  className="rounded-md bg-[#383a40] px-2 py-1 text-xs font-medium text-[#f2f3f5] hover:bg-[#2b2d31]"
+                                  onClick={() => setEditingMemberId(row.id)}
+                                  className="rounded-md bg-[#5865f2] px-2 py-1 text-xs font-medium text-white hover:bg-[#4752c4]"
                                 >
-                                  Cancel
+                                  Edit
                                 </button>
                               )
-                            ) : (
-                              <button
-                                onClick={() => setEditingMemberId(row.id)}
-                                className="rounded-md bg-[#5865f2] px-2 py-1 text-xs font-medium text-white hover:bg-[#4752c4]"
-                              >
-                                Edit
-                              </button>
                             )}
                           </td>
                         </>
@@ -826,14 +846,7 @@ export default function AttendanceReportPage() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <span className="font-bold text-[#f2f3f5]">{row.ign}</span>
-                    {bulkMode ? (
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(row.id)}
-                        onChange={() => toggleMemberSelection(row.id)}
-                        className="h-5 w-5 accent-[#5865f2]"
-                      />
-                    ) : row.status != null ? (
+                    {row.status != null && !bulkMode ? (
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusStyle(row.status)}`}>
                         {getStatusDisplay(row.status)}
                       </span>
@@ -893,9 +906,41 @@ export default function AttendanceReportPage() {
                     </>
                   )}
 
-                  {selectedEventId != null && !bulkMode && (
-                    <div className="mt-3">
-                      {editingMemberId === row.id ? (
+                  {selectedEventId != null && (
+                    <div className="mt-3 space-y-2">
+                      {bulkMode ? (
+                        <>
+                          <select
+                            value={pendingStatus[row.id] ?? row.status ?? "no_response"}
+                            onChange={(e) =>
+                              setPendingStatus((prev) => ({
+                                ...prev,
+                                [row.id]: e.target.value,
+                              }))
+                            }
+                            disabled={bulkSaving}
+                            className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+                          >
+                            <option value="hadir">Hadir</option>
+                            <option value="tidak_hadir">Tidak Hadir</option>
+                            <option value="no_response">No response</option>
+                          </select>
+                          {(pendingStatus[row.id] ?? row.status ?? "no_response") === "tidak_hadir" && (
+                            <input
+                              type="text"
+                              value={pendingReasons[row.id] ?? ""}
+                              onChange={(e) =>
+                                setPendingReasons((prev) => ({
+                                  ...prev,
+                                  [row.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Reason"
+                              className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] placeholder-[#b5bac1] focus:border-[#5865f2] focus:outline-none"
+                            />
+                          )}
+                        </>
+                      ) : editingMemberId === row.id ? (
                         <select
                           value={row.status ?? "no_response"}
                           onChange={(e) =>
@@ -905,7 +950,6 @@ export default function AttendanceReportPage() {
                           className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                         >
                           <option value="hadir">Hadir</option>
-          
                           <option value="tidak_hadir">Tidak Hadir</option>
                           <option value="no_response">No response</option>
                         </select>
