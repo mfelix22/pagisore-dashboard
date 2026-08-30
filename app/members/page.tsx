@@ -766,7 +766,7 @@ export default function MembersPage() {
           </div>
         </section>
 
-        {jobCounts.length > 0 && (
+        {jobCounts.length > 0 && statusFilter !== "inactive" && (
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
             <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
               Active Members by Job
