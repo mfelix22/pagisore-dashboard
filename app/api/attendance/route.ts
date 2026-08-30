@@ -56,12 +56,23 @@ export async function POST(req: NextRequest) {
         .eq("event_id", eventId);
       if (error) throw error;
     } else {
+      const { data: memberData, error: memberError } = await supabaseAdmin
+        .from("members")
+        .select("ign")
+        .eq("id", memberId)
+        .single();
+
+      if (memberError || !memberData) {
+        throw memberError ?? new Error("Member not found");
+      }
+
       const { error } = await supabaseAdmin
         .from("event_attendance")
         .upsert(
           {
             member_id: memberId,
             event_id: eventId,
+            discord_username: memberData.ign,
             status,
             reason: status === "tidak_hadir" ? trimmedReason : null,
           },
