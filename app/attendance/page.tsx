@@ -50,9 +50,6 @@ function getStatusStyle(status: string) {
   if (status === "hadir") {
     return "bg-[#3ba55d]/15 text-[#3ba55d]";
   }
-  if (status === "tentative") {
-    return "bg-[#faa61a]/15 text-[#faa61a]";
-  }
   if (status === "tidak_hadir" || status === "not_attending") {
     return "bg-red-500/15 text-red-400";
   }
@@ -61,16 +58,13 @@ function getStatusStyle(status: string) {
 
 function getTimelineDotColor(status: string) {
   if (status === "hadir") return "bg-[#3ba55d]";
-  if (status === "tentative") return "bg-[#faa61a]";
   if (status === "tidak_hadir") return "bg-red-400";
   return "bg-[#383a40]";
 }
 
 function getStatusDisplay(status: string) {
   if (status === "hadir") return "Hadir";
-  if (status === "tentative") return "Tentative";
-  if (status === "tidak_hadir") return "Tidak Hadir";
-  if (status === "not_attending") return "Tidak Hadir";
+  if (status === "tidak_hadir" || status === "not_attending") return "Tidak Hadir";
   return "No response";
 }
 
@@ -193,7 +187,7 @@ export default function AttendanceReportPage() {
     return filteredMembers.map((m) => {
       if (selectedEventId == null) {
         const counts = memberCounts.get(m.id) ?? { hadir: 0, tentative: 0, tidak_hadir: 0 };
-        const total = counts.hadir + counts.tentative + counts.tidak_hadir;
+        const total = counts.hadir + counts.tidak_hadir;
         const rate = total > 0 ? Math.round((counts.hadir / total) * 100) : 0;
         return {
           ...m,
@@ -275,7 +269,7 @@ export default function AttendanceReportPage() {
           const raw =
             eventStatusMap.get(latestEvent.id)?.get(m.id) ?? "no_response";
           const status = raw === "not_attending" ? "tidak_hadir" : raw;
-          if (status === "hadir" || status === "tentative") return;
+          if (status === "hadir") return;
           const record = recordsByKey.get(`${m.id}-${latestEvent.id}`);
           const isTidakHadir = status === "tidak_hadir";
           list.push({
@@ -424,17 +418,11 @@ export default function AttendanceReportPage() {
         )}
 
         {selectedEventCounts && (
-          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
               <p className="text-xs text-[#b5bac1]">Hadir</p>
               <p className="text-xl font-bold text-[#3ba55d]">
                 {selectedEventCounts.hadir}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
-              <p className="text-xs text-[#b5bac1]">Tentative</p>
-              <p className="text-xl font-bold text-[#faa61a]">
-                {selectedEventCounts.tentative}
               </p>
             </div>
             <div className="rounded-xl bg-[#2b2d31] p-3 text-center shadow-lg ring-1 ring-white/5">
@@ -501,7 +489,6 @@ export default function AttendanceReportPage() {
             <div className="mb-4 flex flex-wrap gap-4 rounded-xl bg-[#2b2d31] p-3 ring-1 ring-white/5">
               {[
                 { color: "bg-[#3ba55d]", label: "Hadir" },
-                { color: "bg-[#faa61a]", label: "Tentative" },
                 { color: "bg-red-400", label: "Tidak Hadir" },
                 { color: "bg-[#383a40]", label: "No Response" },
               ].map((item) => (
@@ -534,7 +521,6 @@ export default function AttendanceReportPage() {
                           </th>
                         ))}
                         <th className="px-4 py-3 text-center font-semibold">Hadir</th>
-                        <th className="px-4 py-3 text-center font-semibold">Tentative</th>
                         <th className="px-4 py-3 text-center font-semibold">Tidak Hadir</th>
                         <th className="px-4 py-3 text-center font-semibold">Total</th>
                         <th className="px-4 py-3 text-center font-semibold">Rate</th>
@@ -573,10 +559,9 @@ export default function AttendanceReportPage() {
                             </td>
                           ))}
                           <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">{row.counts.hadir}</td>
-                          <td className="px-4 py-3 text-center font-bold text-[#faa61a]">{row.counts.tentative}</td>
                           <td className="px-4 py-3 text-center font-bold text-red-400">{row.counts.tidak_hadir}</td>
                           <td className="px-4 py-3 text-center font-bold text-[#f2f3f5]">
-                            {row.counts.hadir + row.counts.tentative + row.counts.tidak_hadir}
+                            {row.counts.hadir + row.counts.tidak_hadir}
                           </td>
                           <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">
                             {row.rate}%
@@ -607,7 +592,7 @@ export default function AttendanceReportPage() {
                                 className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                               >
                                 <option value="hadir">Hadir</option>
-                                <option value="tentative">Tentative</option>
+                
                                 <option value="tidak_hadir">Tidak Hadir</option>
                                 <option value="no_response">No response</option>
                               </select>
@@ -665,7 +650,7 @@ export default function AttendanceReportPage() {
                       </span>
                     ) : (
                       <span className="text-sm text-[#b5bac1]">
-                        Total: {row.counts ? row.counts.hadir + row.counts.tentative + row.counts.tidak_hadir : 0}
+                        Total: {row.counts ? row.counts.hadir + row.counts.tidak_hadir : 0}
                       </span>
                     )}
                   </div>
@@ -678,10 +663,6 @@ export default function AttendanceReportPage() {
                         <div>
                           <p className="text-xs text-[#b5bac1]">Hadir</p>
                           <p className="font-bold text-[#3ba55d]">{row.counts.hadir}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-[#b5bac1]">Tentative</p>
-                          <p className="font-bold text-[#faa61a]">{row.counts.tentative}</p>
                         </div>
                         <div>
                           <p className="text-xs text-[#b5bac1]">Tidak Hadir</p>
@@ -735,7 +716,7 @@ export default function AttendanceReportPage() {
                           className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
                         >
                           <option value="hadir">Hadir</option>
-                          <option value="tentative">Tentative</option>
+          
                           <option value="tidak_hadir">Tidak Hadir</option>
                           <option value="no_response">No response</option>
                         </select>
