@@ -78,6 +78,11 @@ export default function AttendanceReportPage() {
   const [search, setSearch] = useState("");
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
   const [savingMemberId, setSavingMemberId] = useState<number | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState("hadir");
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -367,6 +372,107 @@ export default function AttendanceReportPage() {
     }
   }
 
+  async function loadRecords() {
+    const { data, error } = await supabase
+      .from("event_attendance")
+      .select("member_id, event_id, status, reason");
+    if (error) {
+      console.error("Failed to reload attendance:", error);
+    } else {
+      setRecords((data as AttendanceRecord[]) ?? []);
+    }
+  }
+
+  async function bulkUpdateAttendance() {
+    if (!selectedEventId || selectedIds.size === 0 || bulkSaving) return;
+
+    const reason =
+      bulkStatus === "tidak_hadir" ? (bulkReason.trim() || null) : null;
+
+    setBulkSaving(true);
+    setLoadError(null);
+
+    const ids = Array.from(selectedIds);
+    const failures: number[] = [];
+
+    try {
+      for (const memberId of ids) {
+        try {
+          const res = await fetch("/api/attendance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              memberId,
+              eventId: selectedEventId,
+              status: bulkStatus,
+              reason,
+            }),
+          });
+
+          const text = await res.text();
+          let data: { success?: boolean; error?: string } = { success: false };
+          try {
+            data = text ? JSON.parse(text) : data;
+          } catch {
+            throw new Error(text || `Server error: ${res.status}`);
+          }
+
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || "Failed to update attendance");
+          }
+        } catch (err) {
+          console.error(`Bulk update failed for member ${memberId}:`, err);
+          failures.push(memberId);
+        }
+      }
+
+      await loadRecords();
+
+      if (failures.length > 0) {
+        throw new Error(`Failed to update ${failures.length} member(s).`);
+      }
+
+      setSelectedIds(new Set());
+      setBulkMode(false);
+      setBulkReason("");
+    } catch (err) {
+      console.error("Bulk update failed:", err);
+      const errorMessage =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Failed to update attendance";
+      setLoadError(errorMessage);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  const visibleMemberIds = filteredMembers.map((m) => m.id);
+  const allVisibleSelected =
+    visibleMemberIds.length > 0 &&
+    visibleMemberIds.every((id) => selectedIds.has(id));
+
+  function toggleMemberSelection(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleMemberIds.forEach((id) => next.delete(id));
+      } else {
+        visibleMemberIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="flex flex-1 flex-col p-4 sm:p-6">
       <main className="mx-auto w-full max-w-full">
@@ -391,6 +497,9 @@ export default function AttendanceReportPage() {
                 setSelectedEventId(v === "all" ? null : Number(v));
                 setEditingMemberId(null);
                 setSavingMemberId(null);
+                setBulkMode(false);
+                setSelectedIds(new Set());
+                setBulkReason("");
               }}
               className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-3 text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] sm:w-80"
             >
@@ -402,14 +511,69 @@ export default function AttendanceReportPage() {
               ))}
             </select>
           </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search members..."
-            className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-3 text-[#f2f3f5] placeholder-[#b5bac1] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] sm:w-64"
-          />
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            {selectedEventId != null && (
+              <button
+                onClick={() => {
+                  setBulkMode((prev) => !prev);
+                  setSelectedIds(new Set());
+                  setEditingMemberId(null);
+                  setSavingMemberId(null);
+                  setBulkReason("");
+                }}
+                className={`rounded-lg px-4 py-3 text-sm font-medium transition ${
+                  bulkMode
+                    ? "bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                    : "bg-[#5865f2] text-white hover:bg-[#4752c4]"
+                }`}
+              >
+                {bulkMode ? "Cancel Bulk" : "Bulk Edit"}
+              </button>
+            )}
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search members..."
+              className="w-full rounded-lg border border-[#383a40] bg-[#1e1f22] px-4 py-3 text-[#f2f3f5] placeholder-[#b5bac1] focus:border-[#5865f2] focus:outline-none focus:ring-1 focus:ring-[#5865f2] sm:w-64"
+            />
+          </div>
         </section>
+
+        {bulkMode && (
+          <section className="mb-4 flex flex-wrap items-end gap-3 rounded-xl bg-[#2b2d31] p-3 ring-1 ring-white/5">
+            <div>
+              <p className="mb-1 text-xs text-[#b5bac1]">
+                {selectedIds.size} selected
+              </p>
+              <select
+                value={bulkStatus}
+                onChange={(e) => setBulkStatus(e.target.value)}
+                className="rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+              >
+                <option value="hadir">Hadir</option>
+                <option value="tidak_hadir">Tidak Hadir</option>
+                <option value="no_response">No response</option>
+              </select>
+            </div>
+            {bulkStatus === "tidak_hadir" && (
+              <input
+                type="text"
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                placeholder="Reason (applied to all selected)"
+                className="min-w-[16rem] rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] placeholder-[#b5bac1] focus:border-[#5865f2] focus:outline-none"
+              />
+            )}
+            <button
+              onClick={bulkUpdateAttendance}
+              disabled={selectedIds.size === 0 || bulkSaving}
+              className="rounded-md bg-[#3ba55d] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#2d7c46] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {bulkSaving ? "Saving..." : "Apply"}
+            </button>
+          </section>
+        )}
 
         {selectedEvent && (
           <p className="mb-4 text-sm text-[#b5bac1]">
@@ -530,7 +694,18 @@ export default function AttendanceReportPage() {
                       <>
                         <th className="px-4 py-3 font-semibold">Job</th>
                         <th className="px-4 py-3 text-center font-semibold">Status</th>
-                        <th className="px-4 py-3 text-center font-semibold">Actions</th>
+                        <th className="px-4 py-3 text-center font-semibold">
+                          {bulkMode ? (
+                            <input
+                              type="checkbox"
+                              checked={allVisibleSelected}
+                              onChange={toggleSelectAll}
+                              className="h-4 w-4 accent-[#5865f2]"
+                            />
+                          ) : (
+                            "Actions"
+                          )}
+                        </th>
                       </>
                     )}
                   </tr>
@@ -603,7 +778,14 @@ export default function AttendanceReportPage() {
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {editingMemberId === row.id ? (
+                            {bulkMode ? (
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(row.id)}
+                                onChange={() => toggleMemberSelection(row.id)}
+                                className="h-4 w-4 accent-[#5865f2]"
+                              />
+                            ) : editingMemberId === row.id ? (
                               savingMemberId === row.id ? (
                                 <span className="text-xs text-[#b5bac1]">Saving...</span>
                               ) : (
@@ -644,7 +826,14 @@ export default function AttendanceReportPage() {
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <span className="font-bold text-[#f2f3f5]">{row.ign}</span>
-                    {row.status != null ? (
+                    {bulkMode ? (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id)}
+                        onChange={() => toggleMemberSelection(row.id)}
+                        className="h-5 w-5 accent-[#5865f2]"
+                      />
+                    ) : row.status != null ? (
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusStyle(row.status)}`}>
                         {getStatusDisplay(row.status)}
                       </span>
@@ -704,7 +893,7 @@ export default function AttendanceReportPage() {
                     </>
                   )}
 
-                  {selectedEventId != null && (
+                  {selectedEventId != null && !bulkMode && (
                     <div className="mt-3">
                       {editingMemberId === row.id ? (
                         <select
