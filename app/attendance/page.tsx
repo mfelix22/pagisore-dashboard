@@ -690,7 +690,7 @@ export default function AttendanceReportPage() {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
+            <div className="hidden w-fit max-w-full overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
               <table className="w-auto border-collapse text-left text-xs">
                 <thead className="bg-[#1e1f22] text-[#b5bac1]">
                   <tr>
