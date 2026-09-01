@@ -691,7 +691,7 @@ export default function AttendanceReportPage() {
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
-              <table className="w-full border-collapse text-left text-xs">
+              <table className="w-auto border-collapse text-left text-xs">
                 <thead className="bg-[#1e1f22] text-[#b5bac1]">
                   <tr>
                     <th className="px-1 py-0.5 text-[10px] font-semibold">IGN</th>
