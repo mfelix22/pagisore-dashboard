@@ -47,6 +47,14 @@ function formatJob(job: string | null) {
   return job;
 }
 
+function shortenEventName(name: string) {
+  return name
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
 function getStatusStyle(status: string) {
   if (status === "hadir") {
     return "bg-[#3ba55d]/15 text-[#3ba55d]";
@@ -691,29 +699,29 @@ export default function AttendanceReportPage() {
 
             {/* Desktop table */}
             <div className="hidden w-fit max-w-full overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
-              <table className="w-auto border-collapse text-left text-xs">
+              <table className="w-auto border-collapse text-left text-sm">
                 <thead className="bg-[#1e1f22] text-[#b5bac1]">
                   <tr>
-                    <th className="px-1 py-0.5 text-[10px] font-semibold">IGN</th>
+                    <th className="px-1 py-0.5 font-semibold">IGN</th>
                     {selectedEventId == null ? (
                       <>
                         {events.slice(0, 6).reverse().map((e) => (
                           <th
                             key={e.id}
-                            className="min-w-0 px-0.5 py-0.5 text-center text-[10px] font-medium leading-none"
+                            className="min-w-0 px-0.5 py-0.5 text-center text-xs font-medium leading-none"
                           >
-                            <div>{e.name}</div>
-                            <div className="text-[9px] font-normal text-[#b5bac1]">
+                            <div>{shortenEventName(e.name)}</div>
+                            <div className="text-[10px] font-normal text-[#b5bac1]">
                               {formatEventDate(e.event_date)}
                             </div>
                           </th>
                         ))}
-                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Hadir</th>
-                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Izin</th>
-                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Tidak Hadir</th>
-                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Total</th>
-                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Rate</th>
-                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Streak</th>
+                        <th className="px-0.5 py-0.5 text-center text-xs font-medium">Hadir</th>
+                        <th className="px-0.5 py-0.5 text-center text-xs font-medium">Izin</th>
+                        <th className="px-0.5 py-0.5 text-center text-xs font-medium">Tidak Hadir</th>
+                        <th className="px-0.5 py-0.5 text-center text-xs font-medium">Total</th>
+                        <th className="px-0.5 py-0.5 text-center text-xs font-medium">Rate</th>
+                        <th className="px-0.5 py-0.5 text-center text-xs font-medium">Streak</th>
                       </>
                     ) : (
                       <>
@@ -734,35 +742,35 @@ export default function AttendanceReportPage() {
                           : ""
                       }`}
                     >
-                      <td className="px-1 py-0.5 text-[10px] font-medium text-[#f2f3f5]">{row.ign}</td>
+                      <td className="px-1 py-0.5 font-medium text-[#f2f3f5]">{row.ign}</td>
                       {row.counts ? (
                         <>
                           {row.timeline.slice(0, 6).reverse().map((s, i) => (
                             <td key={i} className="min-w-0 px-0.5 py-0.5 text-center">
                               <span
                                 title={getStatusDisplay(s)}
-                                className={`inline-block h-2.5 w-2.5 rounded-sm ${getTimelineDotColor(
+                                className={`inline-block h-3 w-3 rounded-sm ${getTimelineDotColor(
                                   s
                                 )}`}
                               />
                             </td>
                           ))}
-                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#3ba55d]">{row.counts.hadir}</td>
-                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#faa61a]">{row.counts.izin}</td>
-                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-red-400">{row.counts.tidak_hadir}</td>
-                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#f2f3f5]">
+                          <td className="px-0.5 py-0.5 text-center font-bold text-[#3ba55d]">{row.counts.hadir}</td>
+                          <td className="px-0.5 py-0.5 text-center font-bold text-[#faa61a]">{row.counts.izin}</td>
+                          <td className="px-0.5 py-0.5 text-center font-bold text-red-400">{row.counts.tidak_hadir}</td>
+                          <td className="px-0.5 py-0.5 text-center font-bold text-[#f2f3f5]">
                             {row.counts.hadir + row.counts.izin + row.counts.tidak_hadir}
                           </td>
-                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#3ba55d]">
+                          <td className="px-0.5 py-0.5 text-center font-bold text-[#3ba55d]">
                             {row.rate}%
                           </td>
                           <td className="px-0.5 py-0.5 text-center">
                             {row.absentStreak && row.absentStreak >= 3 ? (
-                              <span className="inline-flex items-center gap-0.5 rounded bg-red-500 px-0.5 py-0 text-[9px] font-bold text-white">
+                              <span className="inline-flex items-center gap-0.5 rounded bg-red-500 px-0.5 py-0 text-[10px] font-bold text-white">
                                 {row.absentStreak} streak
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold text-[#f2f3f5]">
+                              <span className="font-bold text-[#f2f3f5]">
                                 {row.absentStreak}
                               </span>
                             )}
