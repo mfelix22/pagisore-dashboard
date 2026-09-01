@@ -697,7 +697,7 @@ export default function AttendanceReportPage() {
                     <th className="px-4 py-3 font-semibold">IGN</th>
                     {selectedEventId == null ? (
                       <>
-                        {events.slice(0, 6).map((e) => (
+                        {events.slice(0, 6).reverse().map((e) => (
                           <th
                             key={e.id}
                             className="min-w-[6rem] px-2 py-3 text-center text-xs font-semibold"
@@ -737,7 +737,7 @@ export default function AttendanceReportPage() {
                       <td className="px-4 py-3 font-medium text-[#f2f3f5]">{row.ign}</td>
                       {row.counts ? (
                         <>
-                          {row.timeline.slice(0, 6).map((s, i) => (
+                          {row.timeline.slice(0, 6).reverse().map((s, i) => (
                             <td key={i} className="min-w-[6rem] px-2 py-3 text-center">
                               <span
                                 title={getStatusDisplay(s)}
@@ -919,7 +919,7 @@ export default function AttendanceReportPage() {
                       <div className="mt-3">
                         <p className="mb-1 text-xs text-[#b5bac1]">Last 10</p>
                         <div className="flex flex-wrap gap-1">
-                          {row.timeline.map((s, i) => (
+                          {row.timeline.slice().reverse().map((s, i) => (
                             <span
                               key={i}
                               title={s}
