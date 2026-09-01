@@ -60,6 +60,19 @@ function getStatusStyle(status: string) {
   return "bg-[#383a40] text-[#b5bac1]";
 }
 
+function getStatusTextColor(status: string) {
+  if (status === "hadir") {
+    return "text-[#3ba55d]";
+  }
+  if (status === "izin") {
+    return "text-[#faa61a]";
+  }
+  if (status === "tidak_hadir" || status === "not_attending") {
+    return "text-red-400";
+  }
+  return "text-[#f2f3f5]";
+}
+
 function getTimelineDotColor(status: string) {
   if (status === "hadir") return "bg-[#3ba55d]";
   if (status === "izin") return "bg-[#faa61a]";
@@ -770,7 +783,7 @@ export default function AttendanceReportPage() {
                                     }));
                                   }}
                                   disabled={bulkSaving}
-                                  className="w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+                                  className={`w-32 rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1 text-sm ${getStatusTextColor(pendingStatus[row.id] ?? row.status ?? "no_response")} focus:border-[#5865f2] focus:outline-none`}
                                 >
                                   <option value="hadir">Hadir</option>
                                   <option value="izin">Izin</option>
@@ -933,7 +946,7 @@ export default function AttendanceReportPage() {
                               }))
                             }
                             disabled={bulkSaving}
-                            className="w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm text-[#f2f3f5] focus:border-[#5865f2] focus:outline-none"
+                            className={`w-full rounded-md border border-[#383a40] bg-[#1e1f22] px-2 py-1.5 text-sm ${getStatusTextColor(pendingStatus[row.id] ?? row.status ?? "no_response")} focus:border-[#5865f2] focus:outline-none`}
                           >
                             <option value="hadir">Hadir</option>
                             <option value="izin">Izin</option>
