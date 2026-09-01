@@ -691,29 +691,29 @@ export default function AttendanceReportPage() {
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
-              <table className="w-full text-left text-sm">
+              <table className="w-full border-collapse text-left text-xs">
                 <thead className="bg-[#1e1f22] text-[#b5bac1]">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">IGN</th>
+                    <th className="px-1 py-0.5 text-[10px] font-semibold">IGN</th>
                     {selectedEventId == null ? (
                       <>
                         {events.slice(0, 6).reverse().map((e) => (
                           <th
                             key={e.id}
-                            className="min-w-[6rem] px-2 py-3 text-center text-xs font-semibold"
+                            className="min-w-0 px-0.5 py-0.5 text-center text-[10px] font-medium leading-none"
                           >
                             <div>{e.name}</div>
-                            <div className="text-[10px] font-normal text-[#b5bac1]">
+                            <div className="text-[9px] font-normal text-[#b5bac1]">
                               {formatEventDate(e.event_date)}
                             </div>
                           </th>
                         ))}
-                        <th className="px-4 py-3 text-center font-semibold">Hadir</th>
-                        <th className="px-4 py-3 text-center font-semibold">Izin</th>
-                        <th className="px-4 py-3 text-center font-semibold">Tidak Hadir</th>
-                        <th className="px-4 py-3 text-center font-semibold">Total</th>
-                        <th className="px-4 py-3 text-center font-semibold">Rate</th>
-                        <th className="px-4 py-3 text-center font-semibold">Streak</th>
+                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Hadir</th>
+                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Izin</th>
+                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Tidak Hadir</th>
+                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Total</th>
+                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Rate</th>
+                        <th className="px-0.5 py-0.5 text-center text-[10px] font-medium">Streak</th>
                       </>
                     ) : (
                       <>
@@ -734,35 +734,35 @@ export default function AttendanceReportPage() {
                           : ""
                       }`}
                     >
-                      <td className="px-4 py-3 font-medium text-[#f2f3f5]">{row.ign}</td>
+                      <td className="px-1 py-0.5 text-[10px] font-medium text-[#f2f3f5]">{row.ign}</td>
                       {row.counts ? (
                         <>
                           {row.timeline.slice(0, 6).reverse().map((s, i) => (
-                            <td key={i} className="min-w-[6rem] px-2 py-3 text-center">
+                            <td key={i} className="min-w-0 px-0.5 py-0.5 text-center">
                               <span
                                 title={getStatusDisplay(s)}
-                                className={`inline-block h-5 w-5 rounded ${getTimelineDotColor(
+                                className={`inline-block h-2.5 w-2.5 rounded-sm ${getTimelineDotColor(
                                   s
                                 )}`}
                               />
                             </td>
                           ))}
-                          <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">{row.counts.hadir}</td>
-                          <td className="px-4 py-3 text-center font-bold text-[#faa61a]">{row.counts.izin}</td>
-                          <td className="px-4 py-3 text-center font-bold text-red-400">{row.counts.tidak_hadir}</td>
-                          <td className="px-4 py-3 text-center font-bold text-[#f2f3f5]">
+                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#3ba55d]">{row.counts.hadir}</td>
+                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#faa61a]">{row.counts.izin}</td>
+                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-red-400">{row.counts.tidak_hadir}</td>
+                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#f2f3f5]">
                             {row.counts.hadir + row.counts.izin + row.counts.tidak_hadir}
                           </td>
-                          <td className="px-4 py-3 text-center font-bold text-[#3ba55d]">
+                          <td className="px-0.5 py-0.5 text-center text-[10px] font-bold text-[#3ba55d]">
                             {row.rate}%
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-0.5 py-0.5 text-center">
                             {row.absentStreak && row.absentStreak >= 3 ? (
-                              <span className="inline-flex items-center gap-1 rounded bg-red-500 px-2 py-1 text-xs font-bold text-white">
+                              <span className="inline-flex items-center gap-0.5 rounded bg-red-500 px-0.5 py-0 text-[9px] font-bold text-white">
                                 {row.absentStreak} streak
                               </span>
                             ) : (
-                              <span className="font-bold text-[#f2f3f5]">
+                              <span className="text-[10px] font-bold text-[#f2f3f5]">
                                 {row.absentStreak}
                               </span>
                             )}
