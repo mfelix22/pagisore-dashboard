@@ -110,7 +110,7 @@ export default function AttendanceReportPage() {
 
       const [{ data: membersData, error: membersError }, { data: eventsData, error: eventsError }, { data: recordsData, error: recordsError }] = await Promise.all([
         supabase.from("members").select("id, ign, job, is_active").order("ign", { ascending: true }),
-        supabase.from("events").select("id, name, event_date").order("event_date", { ascending: false }),
+        supabase.from("events").select("id, name, event_date").order("event_date", { ascending: true }),
         supabase.from("event_attendance").select("member_id, event_id, status, reason"),
       ]);
 
@@ -917,7 +917,7 @@ export default function AttendanceReportPage() {
                         </div>
                       </div>
                       <div className="mt-3">
-                        <p className="mb-1 text-xs text-[#b5bac1]">Last 10</p>
+                        <p className="mb-1 text-xs text-[#b5bac1]">First 10</p>
                         <div className="flex flex-wrap gap-1">
                           {row.timeline.map((s, i) => (
                             <span
