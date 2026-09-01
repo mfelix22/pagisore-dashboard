@@ -42,6 +42,16 @@ function formatEventDate(date: string | null): string {
   });
 }
 
+function formatEventDateCompact(date: string | null): string {
+  if (!date) return "No date";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 function formatJob(job: string | null) {
   if (!job || job.trim() === "") return "—";
   return job;
@@ -712,7 +722,7 @@ export default function AttendanceReportPage() {
                           >
                             <div>{shortenEventName(e.name)}</div>
                             <div className="text-[10px] font-normal text-[#b5bac1]">
-                              {formatEventDate(e.event_date)}
+                              {formatEventDateCompact(e.event_date)}
                             </div>
                           </th>
                         ))}
