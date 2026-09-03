@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
           ? existingDiscordUserId
           : `dashboard_${memberId}`;
 
-      const { error } = await supabaseAdmin
+      const { data: upsertData, error } = await supabaseAdmin
         .from("event_attendance")
         .upsert(
           {
@@ -91,7 +91,9 @@ export async function POST(req: NextRequest) {
             reason: status === "izin" ? trimmedReason : null,
           },
           { onConflict: "member_id,event_id" }
-        );
+        )
+        .select();
+      console.log("[attendance upsert]", { memberId, eventId, status, discordUserId, upsertData, error });
       if (error) throw error;
     }
 

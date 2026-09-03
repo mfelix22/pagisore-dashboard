@@ -456,23 +456,6 @@ export default function AttendanceReportPage() {
     }
   }
 
-  async function loadRecords() {
-    const { data, error } = await supabase
-      .from("event_attendance")
-      .select("member_id, event_id, status, reason");
-    if (error) {
-      console.error("Failed to reload attendance:", error);
-    } else {
-      setRecords(
-        ((data as AttendanceRecord[]) ?? []).map((r) => ({
-          ...r,
-          member_id: Number(r.member_id),
-          event_id: Number(r.event_id),
-        }))
-      );
-    }
-  }
-
   async function bulkUpdateAttendance() {
     if (!selectedEventId || !bulkInit || bulkSaving) return;
 
@@ -559,8 +542,6 @@ export default function AttendanceReportPage() {
           failures.push({ id: m.id, error: message });
         }
       }
-
-      await loadRecords();
 
       if (failures.length > 0) {
         throw new Error(
@@ -697,7 +678,7 @@ export default function AttendanceReportPage() {
         {selectedEventId != null && personalReasons.length > 0 && (
           <section className="mb-6 rounded-2xl bg-[#2b2d31] p-4 shadow-lg ring-1 ring-white/5 sm:p-6">
             <h2 className="mb-3 text-sm font-semibold text-[#f2f3f5]">
-              Who Can\'t / Didn\'t Attend
+              Who Can't / Didn't Attend
             </h2>
             <div className="space-y-2">
               {personalReasons.map((item) => (
