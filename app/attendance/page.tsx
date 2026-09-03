@@ -122,7 +122,7 @@ export default function AttendanceReportPage() {
   const [bulkInit, setBulkInit] = useState(false);
 
   async function loadRecords() {
-    const res = await fetch("/api/attendance");
+    const res = await fetch("/api/attendance", { cache: "no-store" });
     const text = await res.text();
     let recordsData: AttendanceRecord[] = [];
     try {

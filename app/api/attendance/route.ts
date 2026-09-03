@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
+export const dynamic = "force-dynamic";
+
 const COOKIE_NAME = "officer_session";
 const COOKIE_VALUE = "authenticated";
 
@@ -19,11 +21,33 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin
-      .from("event_attendance")
-      .select("member_id, event_id, status, reason");
-    if (error) throw error;
-    return NextResponse.json({ success: true, data });
+    const allData: any[] = [];
+    const pageSize = 1000;
+    let start = 0;
+    while (true) {
+      const { data, error } = await supabaseAdmin
+        .from("event_attendance")
+        .select("member_id, event_id, status, reason")
+        .order("id", { ascending: true })
+        .range(start, start + pageSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData.push(...data);
+      if (data.length < pageSize) break;
+      start += pageSize;
+    }
+    const hadirCount = allData.filter((r) => r.status === "hadir").length;
+    console.log("[attendance GET] rows:", allData.length, "hadir:", hadirCount);
+    return NextResponse.json(
+      { success: true, data: allData },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (err) {
     const message =
       err && typeof err === "object" && "message" in err
