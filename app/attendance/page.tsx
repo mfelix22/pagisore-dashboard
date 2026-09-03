@@ -238,7 +238,7 @@ export default function AttendanceReportPage() {
   }, [members, search]);
 
   const memberTimelines = useMemo(() => {
-    const recentEvents = events.slice(0, 10);
+    const recentEvents = events.slice(0, 12);
     const map = new Map<number, string[]>();
     members.forEach((m) => {
       const statuses = recentEvents.map((e) => {
@@ -750,7 +750,7 @@ export default function AttendanceReportPage() {
                     <th className="px-1 py-0.5 font-semibold">IGN</th>
                     {selectedEventId == null ? (
                       <>
-                        {events.slice(0, 6).reverse().map((e) => (
+                        {events.slice(0, 12).reverse().map((e) => (
                           <th
                             key={e.id}
                             className="min-w-0 px-0.5 py-0.5 text-center text-xs font-medium leading-none"
@@ -790,7 +790,7 @@ export default function AttendanceReportPage() {
                       <td className="px-1 py-0.5 font-medium text-[#f2f3f5]">{row.ign}</td>
                       {row.counts ? (
                         <>
-                          {row.timeline.slice(0, 6).reverse().map((s, i) => (
+                          {row.timeline.slice(0, 12).reverse().map((s, i) => (
                             <td key={i} className="min-w-0 px-0.5 py-0.5 text-center">
                               <span
                                 title={getStatusDisplay(s)}
@@ -970,7 +970,7 @@ export default function AttendanceReportPage() {
                         </div>
                       </div>
                       <div className="mt-3">
-                        <p className="mb-1 text-xs text-[#b5bac1]">Last 10</p>
+                        <p className="mb-1 text-xs text-[#b5bac1]">Last 12</p>
                         <div className="flex flex-wrap gap-1">
                           {row.timeline.slice().reverse().map((s, i) => (
                             <span
