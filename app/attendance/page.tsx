@@ -254,7 +254,7 @@ export default function AttendanceReportPage() {
     if (bulkMode && !bulkInit && selectedEventId != null) {
       const initialStatus: Record<number, string> = {};
       const initialReasons: Record<number, string> = {};
-      filteredMembers.forEach((m) => {
+      members.forEach((m) => {
         const raw =
           eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
         const status = raw === "not_attending" ? "tidak_hadir" : raw;
@@ -275,7 +275,7 @@ export default function AttendanceReportPage() {
       setPendingReasons({});
       setBulkInit(false);
     }
-  }, [bulkMode, bulkInit, selectedEventId, filteredMembers, eventStatusMap, records]);
+  }, [bulkMode, bulkInit, selectedEventId, members, eventStatusMap, records]);
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) ?? null,
@@ -466,7 +466,7 @@ export default function AttendanceReportPage() {
     const failures: { id: number; error: string }[] = [];
 
     try {
-      for (const m of filteredMembers) {
+      for (const m of members) {
         const original =
           eventStatusMap.get(selectedEventId)?.get(m.id) ?? "no_response";
         const originalStatus =
@@ -509,6 +509,31 @@ export default function AttendanceReportPage() {
           if (!res.ok || !data.success) {
             throw new Error(data.error || "Failed to update attendance");
           }
+
+          setRecords((prev) => {
+            if (newStatus === "no_response") {
+              return prev.filter(
+                (r) => !(r.member_id === m.id && r.event_id === selectedEventId)
+              );
+            }
+            const index = prev.findIndex(
+              (r) => r.member_id === m.id && r.event_id === selectedEventId
+            );
+            if (index >= 0) {
+              const next = [...prev];
+              next[index] = { ...next[index], status: newStatus, reason: newReason };
+              return next;
+            }
+            return [
+              ...prev,
+              {
+                member_id: m.id,
+                event_id: selectedEventId,
+                status: newStatus,
+                reason: newReason,
+              },
+            ];
+          });
         } catch (err) {
           const message =
             err && typeof err === "object" && "message" in err
