@@ -121,15 +121,37 @@ export default function AttendanceReportPage() {
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkInit, setBulkInit] = useState(false);
 
+  async function loadRecords() {
+    const res = await fetch("/api/attendance");
+    const text = await res.text();
+    let recordsData: AttendanceRecord[] = [];
+    try {
+      const json = text ? JSON.parse(text) : { success: false };
+      if (res.ok && json.success && Array.isArray(json.data)) {
+        recordsData = json.data;
+      } else {
+        console.error("Failed to load attendance:", json.error || text);
+      }
+    } catch {
+      console.error("Failed to parse attendance response:", text);
+    }
+    setRecords(
+      recordsData.map((r) => ({
+        ...r,
+        member_id: Number(r.member_id),
+        event_id: Number(r.event_id),
+      }))
+    );
+  }
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setLoadError(null);
 
-      const [{ data: membersData, error: membersError }, { data: eventsData, error: eventsError }, { data: recordsData, error: recordsError }] = await Promise.all([
+      const [{ data: membersData, error: membersError }, { data: eventsData, error: eventsError }] = await Promise.all([
         supabase.from("members").select("id, ign, job, is_active").order("ign", { ascending: true }),
         supabase.from("events").select("id, name, event_date").order("event_date", { ascending: false }),
-        supabase.from("event_attendance").select("member_id, event_id, status, reason"),
       ]);
 
       if (membersError) {
@@ -153,18 +175,7 @@ export default function AttendanceReportPage() {
         })));
       }
 
-      if (recordsError) {
-        console.error("Failed to load attendance:", recordsError);
-        setRecords([]);
-      } else {
-        setRecords(
-          ((recordsData as AttendanceRecord[]) ?? []).map((r) => ({
-            ...r,
-            member_id: Number(r.member_id),
-            event_id: Number(r.event_id),
-          }))
-        );
-      }
+      await loadRecords();
 
       setLoading(false);
     }
@@ -542,6 +553,8 @@ export default function AttendanceReportPage() {
           failures.push({ id: m.id, error: message });
         }
       }
+
+      await loadRecords();
 
       if (failures.length > 0) {
         throw new Error(

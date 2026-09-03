@@ -4,13 +4,42 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 const COOKIE_NAME = "officer_session";
 const COOKIE_VALUE = "authenticated";
 
+function unauthorized() {
+  return NextResponse.json(
+    { success: false, error: "Unauthorized" },
+    { status: 401 }
+  );
+}
+
+export async function GET(req: NextRequest) {
+  const session = req.cookies.get(COOKIE_NAME)?.value;
+  if (session !== COOKIE_VALUE) {
+    return unauthorized();
+  }
+
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
+      .from("event_attendance")
+      .select("member_id, event_id, status, reason");
+    if (error) throw error;
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    const message =
+      err && typeof err === "object" && "message" in err
+        ? String((err as { message: unknown }).message)
+        : "Failed to load attendance";
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: NextRequest) {
   const session = req.cookies.get(COOKIE_NAME)?.value;
   if (session !== COOKIE_VALUE) {
-    return NextResponse.json(
-      { success: false, error: "Unauthorized" },
-      { status: 401 }
-    );
+    return unauthorized();
   }
 
   let body: unknown;
@@ -58,7 +87,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: memberData, error: memberError } = await supabaseAdmin
         .from("members")
-        .select("ign")
+        .select("ign, discord_id")
         .eq("id", memberId)
         .single();
 
@@ -66,34 +95,19 @@ export async function POST(req: NextRequest) {
         throw memberError ?? new Error("Member not found");
       }
 
-      const { data: existingRows } = await supabaseAdmin
-        .from("event_attendance")
-        .select("discord_user_id")
-        .eq("member_id", memberId)
-        .eq("event_id", eventId)
-        .limit(1);
-
-      const existingDiscordUserId = existingRows?.[0]?.discord_user_id;
-      const discordUserId =
-        typeof existingDiscordUserId === "string" && existingDiscordUserId
-          ? existingDiscordUserId
-          : `dashboard_${memberId}`;
-
-      const { data: upsertData, error } = await supabaseAdmin
+      const { error } = await supabaseAdmin
         .from("event_attendance")
         .upsert(
           {
             member_id: memberId,
             event_id: eventId,
-            discord_user_id: discordUserId,
+            discord_user_id: memberData.discord_id,
             discord_username: memberData.ign,
             status,
             reason: status === "izin" ? trimmedReason : null,
           },
           { onConflict: "member_id,event_id" }
-        )
-        .select();
-      console.log("[attendance upsert]", { memberId, eventId, status, discordUserId, upsertData, error });
+        );
       if (error) throw error;
     }
 
