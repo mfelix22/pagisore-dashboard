@@ -743,9 +743,9 @@ export default function AttendanceReportPage() {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden w-fit max-w-full overflow-x-auto rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
+            <div className="hidden w-fit rounded-2xl bg-[#2b2d31] shadow-lg ring-1 ring-white/5 sm:block">
               <table className="w-auto border-collapse text-left text-sm">
-                <thead className="bg-[#1e1f22] text-[#b5bac1]">
+                <thead className="sticky top-0 z-10 bg-[#1e1f22] text-[#b5bac1] [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-[#1e1f22]">
                   <tr>
                     <th className="px-1 py-0.5 font-semibold">IGN</th>
                     {selectedEventId == null ? (
