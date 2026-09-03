@@ -136,9 +136,10 @@ export default function AttendanceReportPage() {
         setLoadError(`Failed to load members: ${membersError.message}`);
         setMembers([]);
       } else {
-        const active = ((membersData as Member[]) ?? []).filter(
-          (m) => m.is_active
-        );
+        const active = ((membersData as Member[]) ?? []).map((m) => ({
+          ...m,
+          id: Number(m.id),
+        })).filter((m) => m.is_active);
         setMembers(active);
       }
 
@@ -146,14 +147,23 @@ export default function AttendanceReportPage() {
         console.error("Failed to load events:", eventsError);
         setEvents([]);
       } else {
-        setEvents((eventsData as Event[]) ?? []);
+        setEvents(((eventsData as Event[]) ?? []).map((e) => ({
+          ...e,
+          id: Number(e.id),
+        })));
       }
 
       if (recordsError) {
         console.error("Failed to load attendance:", recordsError);
         setRecords([]);
       } else {
-        setRecords((recordsData as AttendanceRecord[]) ?? []);
+        setRecords(
+          ((recordsData as AttendanceRecord[]) ?? []).map((r) => ({
+            ...r,
+            member_id: Number(r.member_id),
+            event_id: Number(r.event_id),
+          }))
+        );
       }
 
       setLoading(false);
@@ -453,7 +463,13 @@ export default function AttendanceReportPage() {
     if (error) {
       console.error("Failed to reload attendance:", error);
     } else {
-      setRecords((data as AttendanceRecord[]) ?? []);
+      setRecords(
+        ((data as AttendanceRecord[]) ?? []).map((r) => ({
+          ...r,
+          member_id: Number(r.member_id),
+          event_id: Number(r.event_id),
+        }))
+      );
     }
   }
 

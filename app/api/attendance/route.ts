@@ -66,12 +66,26 @@ export async function POST(req: NextRequest) {
         throw memberError ?? new Error("Member not found");
       }
 
+      const { data: existingRows } = await supabaseAdmin
+        .from("event_attendance")
+        .select("discord_user_id")
+        .eq("member_id", memberId)
+        .eq("event_id", eventId)
+        .limit(1);
+
+      const existingDiscordUserId = existingRows?.[0]?.discord_user_id;
+      const discordUserId =
+        typeof existingDiscordUserId === "string" && existingDiscordUserId
+          ? existingDiscordUserId
+          : `dashboard_${memberId}`;
+
       const { error } = await supabaseAdmin
         .from("event_attendance")
         .upsert(
           {
             member_id: memberId,
             event_id: eventId,
+            discord_user_id: discordUserId,
             discord_username: memberData.ign,
             status,
             reason: status === "izin" ? trimmedReason : null,
